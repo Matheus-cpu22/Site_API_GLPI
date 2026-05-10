@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login — TVF</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="page">
+      <div class="page__bg" aria-hidden="true">
+        <div class="page__bg-image"></div>
+        <div class="page__bg-overlay"></div>
+        <canvas id="network-canvas" class="page__canvas"></canvas>
+      </div>
+
+      <main class="shell">
+        <article class="card" id="login-card">
+          <header class="card__brand">
+            <div class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path
+                  d="M20 4L6 10v10c0 8.5 6 16.4 14 18 8-1.6 14-9.5 14-18V10L20 4z"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linejoin="round"
+                />
+                <path
+                  d="M16 20l3 3 6-6"
+                  stroke="currentColor"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+            <div class="brand-text">
+              <span class="brand-text__title">TVF</span>
+              <span class="brand-text__tag">Soluções em TI</span>
+            </div>
+          </header>
+
+          <h1 class="card__title">Bem-vindo de volta!</h1>
+          <p class="card__subtitle">
+            Faça <strong>login</strong> para acessar sua conta.
+          </p>
+
+          <form class="form" id="login-form" novalidate>
+            <label class="field">
+              <span class="sr-only">E-mail</span>
+              <span class="field__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path d="M4 6h16v12H4V6z" stroke-linejoin="round" />
+                  <path d="M4 7l8 6 8-6" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </span>
+              <input
+                type="email"
+                name="email"
+                class="field__input"
+                placeholder="Seu e-mail"
+                autocomplete="email"
+                required
+              />
+            </label>
+
+            <div class="field-block">
+              <label class="field">
+                <span class="sr-only">Senha</span>
+                <span class="field__icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                    <rect x="5" y="11" width="14" height="10" rx="2" />
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4" stroke-linecap="round" />
+                  </svg>
+                </span>
+                <input
+                  type="password"
+                  name="password"
+                  class="field__input"
+                  placeholder="Sua senha"
+                  autocomplete="current-password"
+                  required
+                />
+              </label>
+              <a href="#" class="link-forgot">Esqueceu a senha?</a>
+            </div>
+
+            <button type="submit" class="btn-submit">Entrar</button>
+          </form>
+
+          <p class="card__security">
+            <span class="card__security-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 3l8 4v6c0 5-3.5 9.5-8 10-4.5-.5-8-5-8-10V7l8-4z" stroke-linejoin="round" />
+                <path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            Seus dados estão protegidos e serão tratados com segurança.
+        </article>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
