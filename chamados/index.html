@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Central de Atendimento TVF</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="support-page">
+      <div class="support-page__background" aria-hidden="true">
+        <div class="support-page__bg-gradient"></div>
+        <div class="support-page__bg-grid"></div>
+        <div class="support-page__bg-glow support-page__bg-glow--left"></div>
+        <div class="support-page__bg-glow support-page__bg-glow--right"></div>
+        <canvas id="network-canvas" class="support-page__canvas"></canvas>
+      </div>
+
+      <main class="support-shell">
+        <header class="support-header">
+          <div class="brand">
+            <img src="../assets/logo.png" alt="TVF Soluções em TI" class="brand__logo" />
+          </div>
+
+          <div class="header-title">
+            <h1>Central de Atendimento TVF</h1>
+            <p>Suporte com agilidade, organização e segurança</p>
+          </div>
+
+          <div class="contact">
+            <a href="tel:+5519991708717">(19) 99170-8717</a>
+            <a href="mailto:tvf@tvf.solucoes">@tvf.solucoes</a>
+          </div>
+        </header>
+
+        <div class="support-content">
+          <section class="support-benefits" aria-labelledby="support-benefits-title">
+            <div>
+              <h2 id="support-benefits-title">
+                Abra seu chamado com <span>rapidez e confiança.</span>
+              </h2>
+              <p class="support-benefits__description">
+                Nossa equipe analisará sua solicitação e retornará o mais breve possível.
+              </p>
+            </div>
+
+            <ul class="support-benefits__list">
+              <li>
+                <span class="icon-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <rect x="3.5" y="6" width="17" height="13" rx="2.4" />
+                    <path d="M8 6V4.4M16 6V4.4M3.5 10.3h17" stroke-linecap="round" />
+                  </svg>
+                </span>
+                Atendimento organizado
+              </li>
+              <li>
+                <span class="icon-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <path d="M7 4.8h7.6l3.4 3.5V19a1.8 1.8 0 0 1-1.8 1.8H7A1.8 1.8 0 0 1 5.2 19V6.6A1.8 1.8 0 0 1 7 4.8z" />
+                    <path d="M14.6 4.8V8h3.2M8.5 11.8h7M8.5 15h7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                Histórico de solicitações
+              </li>
+              <li>
+                <span class="icon-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <circle cx="12" cy="12" r="8.4" />
+                    <path d="M12 7.8v4.6l3 2.2" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                Acompanhamento em tempo real
+              </li>
+              <li>
+                <span class="icon-badge" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">
+                    <circle cx="8.2" cy="9" r="2.7" />
+                    <circle cx="15.8" cy="9" r="2.7" />
+                    <path d="M3.8 18.5a4.5 4.5 0 0 1 4.4-3.7h8a4.5 4.5 0 0 1 4.4 3.7" stroke-linecap="round" />
+                  </svg>
+                </span>
+                Equipe especializada
+              </li>
+            </ul>
+
+            <aside class="track-card" aria-label="Acompanhamento de chamado existente">
+              <p>Já abriu um chamado?</p>
+              <a href="#" class="track-card__button">Acompanhe aqui</a>
+            </aside>
+          </section>
+
+          <section class="ticket-panel" aria-labelledby="ticket-panel-title">
+            <h2 id="ticket-panel-title">Abrir Chamado</h2>
+            <form id="ticket-form" class="ticket-form" novalidate>
+              <div class="ticket-form__grid">
+                <label class="field">
+                  <span>Nome</span>
+                  <input type="text" name="name" placeholder="Seu nome completo" autocomplete="name" required />
+                </label>
+
+                <label class="field">
+                  <span>E-mail</span>
+                  <input type="email" name="email" placeholder="seuemail@exemplo.com" autocomplete="email" required />
+                </label>
+              </div>
+
+              <label class="field">
+                <span>Departamento</span>
+                <select name="department" required>
+                  <option value="">Selecione o setor</option>
+                  <option value="infraestrutura">Infraestrutura</option>
+                  <option value="suporte">Suporte Técnico</option>
+                  <option value="desenvolvimento">Desenvolvimento</option>
+                  <option value="financeiro">Financeiro</option>
+                  <option value="administrativo">Administrativo</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span>Assunto</span>
+                <input type="text" name="subject" placeholder="Título do chamado" required />
+              </label>
+
+              <label class="field field--textarea">
+                <span>Descrição</span>
+                <textarea
+                  name="description"
+                  rows="4"
+                  placeholder="Descreva seu problema com o máximo de detalhes..."
+                  required
+                ></textarea>
+              </label>
+
+              <label class="field field--file">
+                <span>Anexar arquivos (opcional)</span>
+                <input type="file" name="attachments" multiple />
+              </label>
+
+              <button type="submit" class="submit-button">Enviar solicitação</button>
+            </form>
+
+            <p class="ticket-panel__security">
+              Seus dados estão protegidos e serão tratados com segurança.
+            </p>
+          </section>
+        </div>
+
+        <footer class="support-footer">
+          <span>Resposta em até <strong>24h úteis</strong> após o envio do chamado.</span>
+        </footer>
+      </main>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>

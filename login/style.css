@@ -123,41 +123,13 @@ body {
 .card__brand {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
   margin-bottom: 1.5rem;
 }
 
-.brand-mark {
-  width: 44px;
-  height: 44px;
-  color: var(--text);
-  flex-shrink: 0;
-}
-
-.brand-mark svg {
-  width: 100%;
-  height: 100%;
-}
-
-.brand-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-}
-
-.brand-text__title {
-  font-size: 1.35rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.1;
-}
-
-.brand-text__tag {
-  font-size: 0.65rem;
-  font-weight: 500;
-  letter-spacing: 0.28em;
-  text-transform: uppercase;
-  color: var(--text-muted);
+.brand-logo {
+  display: block;
+  width: clamp(9.5rem, 26vw, 12.2rem);
+  height: auto;
 }
 
 .card__title {
@@ -347,8 +319,8 @@ body {
     font-size: 1.2rem;
   }
 
-  .brand-text__title {
-    font-size: 1.2rem;
+  .brand-logo {
+    width: clamp(8.4rem, 45vw, 10.6rem);
   }
 }
 
