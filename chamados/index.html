@@ -98,50 +98,67 @@
 
           <section class="ticket-panel" aria-labelledby="ticket-panel-title">
             <h2 id="ticket-panel-title">Abrir Chamado</h2>
-            <form id="ticket-form" class="ticket-form" novalidate>
+            <form id="ticket-form" class="ticket-form">
               <div class="ticket-form__grid">
                 <label class="field">
-                  <span>Nome</span>
-                  <input type="text" name="name" placeholder="Seu nome completo" autocomplete="name" required />
+                  <span>Tipo de chamado <span class="field__optional">(opcional)</span></span>
+                  <select name="ticket_type" autocomplete="off">
+                    <option value="">Selecione o tipo</option>
+                    <option value="incidente">Incidente</option>
+                    <option value="requisicao">Requisição</option>
+                  </select>
                 </label>
 
                 <label class="field">
-                  <span>E-mail</span>
-                  <input type="email" name="email" placeholder="seuemail@exemplo.com" autocomplete="email" required />
+                  <span>Nível de urgência <span class="field__optional">(opcional)</span></span>
+                  <select name="urgency" autocomplete="off">
+                    <option value="">Selecione o nível</option>
+                    <option value="muito_baixa">Muito baixa</option>
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="muito_alta">Muito alta</option>
+                  </select>
                 </label>
               </div>
 
               <label class="field">
-                <span>Departamento</span>
-                <select name="department" required>
-                  <option value="">Selecione o setor</option>
-                  <option value="infraestrutura">Infraestrutura</option>
-                  <option value="suporte">Suporte Técnico</option>
-                  <option value="desenvolvimento">Desenvolvimento</option>
-                  <option value="financeiro">Financeiro</option>
-                  <option value="administrativo">Administrativo</option>
-                </select>
-              </label>
-
-              <label class="field">
-                <span>Assunto</span>
-                <input type="text" name="subject" placeholder="Título do chamado" required />
+                <span>Título <span class="field__optional">(opcional)</span></span>
+                <input
+                  type="text"
+                  name="title"
+                  placeholder="Resumo curto do chamado"
+                  autocomplete="off"
+                  maxlength="200"
+                />
               </label>
 
               <label class="field field--textarea">
-                <span>Descrição</span>
+                <span>Descrição <span class="field__required">(obrigatório)</span></span>
                 <textarea
                   name="description"
-                  rows="4"
-                  placeholder="Descreva seu problema com o máximo de detalhes..."
+                  rows="5"
+                  placeholder="Descreva o problema ou a necessidade com o máximo de detalhes..."
                   required
+                  aria-required="true"
                 ></textarea>
               </label>
 
-              <label class="field field--file">
-                <span>Anexar arquivos (opcional)</span>
-                <input type="file" name="attachments" multiple />
-              </label>
+              <div class="field field--file">
+                <label for="attachments">Anexar arquivos <span class="field__optional">(opcional)</span></label>
+                <p class="field__hint" id="attachments-hint">
+                  Você pode enviar vários arquivos; o tamanho total dos anexos não pode ultrapassar 40 MB.
+                </p>
+                <input
+                  id="attachments"
+                  type="file"
+                  name="attachments"
+                  multiple
+                  aria-describedby="attachments-hint"
+                />
+              </div>
+
+              <p class="form-feedback" id="form-feedback" role="alert" aria-live="polite" hidden></p>
 
               <button type="submit" class="submit-button">Enviar solicitação</button>
             </form>

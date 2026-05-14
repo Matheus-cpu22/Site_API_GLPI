@@ -23,7 +23,7 @@ chamados/
 
 - `index.html`: estrutura semântica da tela (topo, painel esquerdo, formulário e rodapé).
 - `style.css`: design system local (tokens de cor/spacing/raio/sombra), layout responsivo, glassmorphism, glow e estados de interação.
-- `script.js`: efeito visual de rede tecnológica no background via canvas e controle de animação com `prefers-reduced-motion`.
+- `script.js`: efeito visual de rede tecnológica no background via canvas, controle de animação com `prefers-reduced-motion` e validação do tamanho total dos anexos (40 MB).
 
 ## O que foi implementado
 
@@ -49,15 +49,16 @@ chamados/
 
 ### 3) Lado direito (formulário)
 
-Formulário completo com:
+Formulário alinhado ao fluxo de abertura de chamado solicitado:
 
-- Nome
-- E-mail
-- Departamento (select)
-- Assunto
-- Descrição (textarea)
-- Upload de arquivos (múltiplos anexos)
+- **Tipo de chamado** (opcional): `Incidente` ou `Requisição`
+- **Nível de urgência** (opcional): `Muito baixa`, `Baixa`, `Média`, `Alta`, `Muito alta`
+- **Título** (opcional): resumo curto do chamado
+- **Descrição** (**obrigatório**): detalhamento do problema ou da necessidade
+- **Anexos** (opcional): múltiplos arquivos, com validação no cliente para **tamanho total máximo de 40 MB**
 - Botão principal de envio
+
+> A obrigatoriedade no HTML segue a regra de negócio: somente a descrição possui `required`. Tipo, urgência, título e anexos são opcionais. O limite de 40 MB é validado em JavaScript no `change` do input de arquivos e no `submit` (a validação final de tamanho e tipo deve ser reforçada no backend ao integrar a API).
 
 #### Estilo e UX do formulário
 
@@ -111,9 +112,9 @@ Foram definidos breakpoints para garantir adaptação entre resoluções amplas 
 
 1. Usuário acessa `chamados/index.html`.
 2. Visualiza informações institucionais e benefícios do suporte.
-3. Preenche formulário de abertura de chamado.
-4. Faz upload opcional de arquivos.
-5. Envia solicitação (atualmente com `preventDefault` para integração futura).
+3. Preenche o formulário (apenas a **descrição** é obrigatória; tipo, urgência, título e anexos são opcionais).
+4. Opcionalmente anexa arquivos; o total não pode passar de **40 MB** (validação no cliente ao alterar anexos e ao enviar).
+5. Envia a solicitação (o envio real ainda está com `preventDefault` até existir integração com API; a validação nativa do HTML garante a descrição preenchida).
 
 ## Dependências utilizadas
 
@@ -125,9 +126,8 @@ Não foram adicionadas bibliotecas JS/CSS extras.
 ## Melhorias futuras planejadas
 
 - Integração com endpoint real de criação de chamado
-- Validação de formulário robusta (frontend + backend)
-- Upload com barra de progresso e validação de tipo/tamanho de arquivo
-- Máscaras e validações adicionais (telefone, domínio de e-mail corporativo)
+- Validação de formulário robusta (frontend + backend), incluindo limite de 40 MB no servidor
+- Upload com barra de progresso e validação de tipos de arquivo permitidos
 - Internacionalização (i18n), caso necessário
 - Testes E2E de fluxo principal e regressão visual
 

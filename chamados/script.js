@@ -133,10 +133,58 @@
 
   startBackground();
 
+  var MAX_ATTACHMENT_BYTES = 40 * 1024 * 1024;
   var form = document.getElementById("ticket-form");
+  var attachmentsInput = document.getElementById("attachments");
+  var feedbackEl = document.getElementById("form-feedback");
+
+  function setFormFeedback(message) {
+    if (!feedbackEl) return;
+    feedbackEl.textContent = message || "";
+    feedbackEl.hidden = !message;
+  }
+
+  function totalAttachmentSize(files) {
+    var total = 0;
+    var i;
+    for (i = 0; i < files.length; i += 1) {
+      total += files[i].size;
+    }
+    return total;
+  }
+
+  function validateAttachments() {
+    if (!attachmentsInput || !attachmentsInput.files) return true;
+    var total = totalAttachmentSize(attachmentsInput.files);
+    if (total > MAX_ATTACHMENT_BYTES) {
+      setFormFeedback(
+        "O tamanho total dos anexos ultrapassa 40 MB. Remova ou substitua arquivos e tente novamente."
+      );
+      attachmentsInput.setAttribute("aria-invalid", "true");
+      return false;
+    }
+    attachmentsInput.removeAttribute("aria-invalid");
+    setFormFeedback("");
+    return true;
+  }
+
+  if (attachmentsInput) {
+    attachmentsInput.addEventListener("change", function () {
+      validateAttachments();
+    });
+  }
+
   if (!form) return;
 
   form.addEventListener("submit", function (event) {
+    if (!validateAttachments()) {
+      event.preventDefault();
+      return;
+    }
+    if (!form.reportValidity()) {
+      event.preventDefault();
+      return;
+    }
     event.preventDefault();
   });
 })();

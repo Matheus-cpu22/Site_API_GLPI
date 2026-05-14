@@ -8,10 +8,10 @@ Foi adicionada uma nova tela profissional de abertura de chamados para central d
 
 Permitir que usuários registrem chamados de suporte com clareza e agilidade, incluindo:
 
-- formulário completo de solicitação
-- seleção de departamento
-- descrição detalhada do problema
-- upload de anexos
+- tipo de chamado (incidente ou requisição), opcional
+- nível de urgência (muito baixa a muito alta), opcional
+- título opcional e descrição obrigatória
+- upload opcional de anexos (até 40 MB no total, validado no cliente)
 - comunicação visual de segurança e tempo de resposta
 
 ### Estrutura criada
@@ -36,5 +36,5 @@ chamados/
 
 - `index.html`: composição estrutural da página (topo, conteúdo, formulário e rodapé)
 - `style.css`: identidade visual, tokens, responsividade e efeitos
-- `script.js`: animação de rede tecnológica no background + controle de acessibilidade para movimento reduzido
+- `script.js`: animação de rede tecnológica no background, acessibilidade para movimento reduzido e validação do tamanho total dos anexos (40 MB)
 - `DOCUMENTACAO_CHAMADOS.md`: documentação técnica detalhada da implementação
