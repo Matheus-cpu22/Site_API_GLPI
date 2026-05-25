@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Meus Chamados — TVF</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../chamados/style.css" />
+  </head>
+  <body>
+    <div class="support-page">
+      <div class="support-page__background" aria-hidden="true">
+        <div class="support-page__bg-gradient"></div>
+        <div class="support-page__bg-grid"></div>
+        <div class="support-page__bg-glow support-page__bg-glow--left"></div>
+        <div class="support-page__bg-glow support-page__bg-glow--right"></div>
+        <canvas id="network-canvas" class="support-page__canvas"></canvas>
+      </div>
+
+      <main class="support-shell">
+        <header class="support-header">
+          <div class="brand">
+            <img src="../assets/logo.png" alt="TVF Soluções em TI" class="brand__logo" />
+          </div>
+          <div class="header-title">
+            <h1>Meus Chamados</h1>
+            <p>Acompanhe suas solicitações de suporte</p>
+          </div>
+          <div class="contact">
+            <a href="#" id="logout-link">Sair</a>
+          </div>
+        </header>
+
+        <section class="ticket-panel">
+          <div class="page-actions">
+            <a href="../chamados/index.html">+ Abrir novo chamado</a>
+          </div>
+
+          <p class="form-feedback" id="list-feedback" role="alert" aria-live="polite" hidden></p>
+          <ul class="ticket-list" id="ticket-list"></ul>
+          <p class="ticket-panel__security" id="list-empty" hidden>Nenhum chamado encontrado.</p>
+        </section>
+      </main>
+    </div>
+
+    <script src="../assets/js/api-client.js"></script>
+    <script src="../chamados/script.js"></script>
+    <script src="chamados-list.js"></script>
+  </body>
+</html>

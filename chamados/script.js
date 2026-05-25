@@ -142,6 +142,7 @@
     if (!feedbackEl) return;
     feedbackEl.textContent = message || "";
     feedbackEl.hidden = !message;
+    feedbackEl.classList.remove("form-feedback--success");
   }
 
   function totalAttachmentSize(files) {
@@ -174,17 +175,87 @@
     });
   }
 
+  var submitButton = form ? form.querySelector(".submit-button") : null;
+
+  function ensureAuthenticated() {
+    if (!window.PortalApi) return Promise.resolve(false);
+
+    return window.PortalApi.get("session.php").then(function (result) {
+      if (!result.ok || !result.payload.status) {
+        window.location.href = "../login/index.html";
+        return false;
+      }
+      return true;
+    });
+  }
+
+  ensureAuthenticated();
+
   if (!form) return;
 
   form.addEventListener("submit", function (event) {
-    if (!validateAttachments()) {
-      event.preventDefault();
-      return;
-    }
-    if (!form.reportValidity()) {
-      event.preventDefault();
-      return;
-    }
     event.preventDefault();
+
+    if (!validateAttachments()) return;
+    if (!form.reportValidity()) return;
+
+    if (!window.PortalApi) {
+      setFormFeedback("Cliente de API não carregado.");
+      return;
+    }
+
+    var formData = new FormData();
+    var titleInput = form.querySelector('[name="title"]');
+    var descriptionInput = form.querySelector('[name="description"]');
+    var typeInput = form.querySelector('[name="ticket_type"]');
+    var urgencyInput = form.querySelector('[name="urgency"]');
+
+    formData.append("titulo", titleInput ? titleInput.value.trim() : "");
+    formData.append("descricao", descriptionInput ? descriptionInput.value.trim() : "");
+    formData.append("ticket_type", typeInput ? typeInput.value : "");
+    formData.append("urgency", urgencyInput ? urgencyInput.value : "");
+
+    if (attachmentsInput && attachmentsInput.files) {
+      var f;
+      for (f = 0; f < attachmentsInput.files.length; f += 1) {
+        formData.append("attachments[]", attachmentsInput.files[f]);
+      }
+    }
+
+    if (submitButton) submitButton.disabled = true;
+    setFormFeedback("");
+
+    window.PortalApi.postForm("abrir-chamado.php", formData)
+      .then(function (result) {
+        if (!result.ok || !result.payload.status) {
+          setFormFeedback(result.payload.message || "Não foi possível abrir o chamado.");
+          return;
+        }
+
+        var ticketId = result.payload.data && result.payload.data.ticket_id;
+        var uploadErrors =
+          result.payload.data && result.payload.data.upload_errors
+            ? result.payload.data.upload_errors
+            : [];
+
+        var message = "Chamado #" + ticketId + " criado com sucesso.";
+        if (uploadErrors.length) {
+          message += " Alguns anexos não foram enviados.";
+        }
+
+        setFormFeedback(message);
+        if (feedbackEl) feedbackEl.classList.add("form-feedback--success");
+        form.reset();
+
+        window.setTimeout(function () {
+          window.location.href = "../views/chamados.html";
+        }, 1200);
+      })
+      .catch(function () {
+        setFormFeedback("Erro de comunicação com o servidor.");
+      })
+      .finally(function () {
+        if (submitButton) submitButton.disabled = false;
+      });
   });
 })();

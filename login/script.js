@@ -2,7 +2,9 @@
   "use strict";
 
   var canvas = document.getElementById("network-canvas");
-  if (!canvas || !canvas.getContext) return;
+  if (!canvas || !canvas.getContext) {
+    return;
+  }
 
   var ctx = canvas.getContext("2d");
   var particles = [];
@@ -93,6 +95,7 @@
   }
 
   var rafId = 0;
+
   function loop() {
     step();
     rafId = requestAnimationFrame(loop);
@@ -114,11 +117,4 @@
   });
 
   start();
-
-  var form = document.getElementById("login-form");
-  if (form) {
-    form.addEventListener("submit", function (e) {
-      e.preventDefault();
-    });
-  }
 })();

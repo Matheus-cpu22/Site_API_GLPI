@@ -32,8 +32,10 @@
           </p>
 
           <form class="form" id="login-form" novalidate>
+            <p class="form-feedback" id="login-feedback" role="alert" aria-live="polite" hidden></p>
+
             <label class="field">
-              <span class="sr-only">E-mail</span>
+              <span class="sr-only">Usuário</span>
               <span class="field__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
                   <path d="M4 6h16v12H4V6z" stroke-linejoin="round" />
@@ -41,11 +43,11 @@
                 </svg>
               </span>
               <input
-                type="email"
-                name="email"
+                type="text"
+                name="login"
                 class="field__input"
-                placeholder="Seu e-mail"
-                autocomplete="email"
+                placeholder="Seu usuário GLPI"
+                autocomplete="username"
                 required
               />
             </label>
@@ -71,7 +73,7 @@
               <a href="#" class="link-forgot">Esqueceu a senha?</a>
             </div>
 
-            <button type="submit" class="btn-submit">Entrar</button>
+            <button type="submit" class="btn-submit" id="login-submit">Entrar</button>
           </form>
 
           <p class="card__security">
@@ -82,10 +84,13 @@
               </svg>
             </span>
             Seus dados estão protegidos e serão tratados com segurança.
+          </p>
         </article>
       </main>
     </div>
 
+    <script src="../assets/js/api-client.js"></script>
+    <script src="login-auth.js"></script>
     <script src="script.js"></script>
   </body>
 </html>
