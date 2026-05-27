@@ -18,8 +18,19 @@
   var API_BASE = resolveApiBase();
 
   function parseJsonResponse(response) {
-    return response.json().catch(function () {
-      return { status: false, message: "Resposta inválida do servidor." };
+    return response.text().then(function (bodyText) {
+      try {
+        return JSON.parse(bodyText);
+      } catch (error) {
+        return {
+          status: false,
+          message:
+            "Resposta inválida do servidor (" +
+            response.status +
+            "). Verifique IIS/PHP. Trecho: " +
+            (bodyText || "").slice(0, 140),
+        };
+      }
     });
   }
 
