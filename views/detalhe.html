@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../chamados/style.css" />
+    <link rel="stylesheet" href="acompanhamento.css" />
   </head>
   <body>
     <div class="support-page">
@@ -22,29 +23,49 @@
         <canvas id="network-canvas" class="support-page__canvas"></canvas>
       </div>
 
-      <main class="support-shell">
-        <header class="support-header">
+      <main class="support-shell support-shell--wide">
+        <header class="track-topbar">
           <div class="brand">
             <img src="../assets/logo.png" alt="TVF Soluções em TI" class="brand__logo" />
           </div>
-          <div class="header-title">
-            <h1>Detalhes do Chamado</h1>
-            <p>Informações completas da solicitação</p>
-          </div>
-          <div class="contact">
-            <a href="chamados.html">Voltar</a>
+          <div class="track-topbar__contacts">
+            <a href="chamados.html">← Voltar para chamados</a>
           </div>
         </header>
 
         <section class="ticket-panel ticket-detail" id="ticket-detail">
           <p class="form-feedback" id="detail-feedback" role="alert" aria-live="polite" hidden></p>
-          <div id="ticket-detail-content" hidden>
-            <p><span class="ticket-detail__label">ID</span><br /><span id="detail-id"></span></p>
-            <p><span class="ticket-detail__label">Título</span><br /><span id="detail-title"></span></p>
-            <p><span class="ticket-detail__label">Descrição</span><br /><span id="detail-description"></span></p>
-            <p><span class="ticket-detail__label">Status</span><br /><span id="detail-status"></span></p>
-            <p><span class="ticket-detail__label">Urgência</span><br /><span id="detail-urgency"></span></p>
-            <p><span class="ticket-detail__label">Abertura</span><br /><span id="detail-date"></span></p>
+
+          <div id="ticket-detail-content" class="detail-grid" hidden>
+            <div>
+              <p class="ticket-detail__label">Nº do Chamado</p>
+              <p class="ticket-id" id="detail-id">-</p>
+            </div>
+
+            <div>
+              <p class="ticket-detail__label">Assunto</p>
+              <p id="detail-title">-</p>
+            </div>
+
+            <div class="detail-meta-row" id="detail-badges"></div>
+
+            <div>
+              <p class="ticket-detail__label">Descrição</p>
+              <p class="detail-description" id="detail-description">-</p>
+            </div>
+
+            <div>
+              <p class="ticket-detail__label">Data de abertura</p>
+              <p id="detail-date">-</p>
+            </div>
+
+            <section class="detail-history" aria-label="Histórico de respostas">
+              <h3>Histórico de respostas</h3>
+              <ul class="history-list" id="detail-history-list"></ul>
+              <p class="history-empty" id="detail-history-empty" hidden>
+                Nenhuma resposta registrada até o momento.
+              </p>
+            </section>
           </div>
         </section>
       </main>

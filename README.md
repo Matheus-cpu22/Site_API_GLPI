@@ -52,9 +52,10 @@ Extensao-5/
 ├── chamados/                  # Abertura de chamado (frontend existente)
 ├── views/
 │   ├── login.html             # Redireciona para login/
-│   ├── chamados.html          # Listagem de chamados
-│   ├── chamados-list.js
-│   ├── detalhe.html           # Detalhes do chamado
+│   ├── chamados.html          # Acompanhamento de chamados (tabela + filtros)
+│   ├── chamados-list.js       # Lógica da listagem e filtros
+│   ├── acompanhamento.css     # Estilos da tela de acompanhamento/detalhe
+│   ├── detalhe.html           # Detalhes do chamado + histórico
 │   └── detalhe.js
 ├── web.config                 # IIS — documento padrão
 ├── .gitignore
@@ -157,11 +158,31 @@ Todos retornam JSON no padrão:
 
 ### Listar — `GET api/listar-chamados.php`
 
-Retorna `data.tickets[]` com `id`, `titulo`, `status`, `data_abertura`, `urgencia`.
+Retorna `data.tickets[]` com:
+
+| Campo | Descrição |
+|-------|-----------|
+| `id` | Número do chamado |
+| `titulo` | Assunto |
+| `status` | Label legível (Aberto, Em andamento, Resolvido…) |
+| `status_grupo` | `abertos` \| `andamento` \| `resolvidos` (para filtros) |
+| `prioridade` | Alta, Média ou Baixa |
+| `data_label` | Texto relativo (ex.: "Atualizado há 10 min") |
+| `data_abertura` / `data_atualizacao` | Datas brutas do GLPI |
 
 ### Detalhes — `GET api/detalhes-chamado.php?id=123`
 
-Retorna `data.ticket` com campos normalizados. Valida se o solicitante é o usuário logado.
+Retorna `data.ticket` com campos normalizados e, quando disponível no GLPI, `respostas[]`:
+
+```json
+{
+  "autor": "Equipe TVF",
+  "mensagem": "Estamos verificando o problema.",
+  "data": "Atualizado há 10 min"
+}
+```
+
+Valida se o solicitante é o usuário logado.
 
 ## Fluxo de autenticação
 
@@ -173,12 +194,63 @@ Retorna `data.ticket` com campos normalizados. Valida se o solicitante é o usu�
 
 ## Integração frontend (sem alterar visual)
 
-- `login/script.js` → `POST api/login.php`
+- `login/script.js` + `login/login-auth.js` → `POST api/login.php`
 - `chamados/script.js` → verifica `session.php`, envia `abrir-chamado.php` via `FormData`
-- `views/chamados-list.js` → `GET listar-chamados.php`
+- `views/chamados-list.js` → `GET session.php` + `GET listar-chamados.php`
 - `views/detalhe.js` → `GET detalhes-chamado.php?id=`
 
 Cliente compartilhado: `assets/js/api-client.js` (`window.PortalApi`).
+
+## Tela de acompanhamento (`views/chamados.html`)
+
+### Arquivos alterados/criados
+
+| Arquivo | Função |
+|---------|--------|
+| `views/chamados.html` | Layout da tela (header, cards, tabela, botões) |
+| `views/chamados-list.js` | Filtros, paginação, renderização, API |
+| `views/acompanhamento.css` | Estilos específicos (tabela, badges, cards) |
+| `views/detalhe.html` | Layout de detalhes + histórico |
+| `views/detalhe.js` | Carrega detalhe e renderiza respostas |
+| `api/services/glpi.php` | Normalização de status, prioridade e follow-ups |
+
+### Como funciona
+
+1. Usuário autenticado acessa `views/chamados.html`.
+2. `chamados-list.js` chama `session.php` para exibir **"Olá, Nome!"**.
+3. Em seguida chama `listar-chamados.php` e preenche a tabela.
+4. Cards de resumo contam chamados por grupo de status.
+5. Botão **Recarregar status** repete a listagem.
+6. Botão **+ Novo Chamado** leva para `chamados/index.html`.
+
+### Filtros por status
+
+| Card | Grupo (`status_grupo`) |
+|------|------------------------|
+| Abertos | `abertos` (novo, pendente) |
+| Em andamento | `andamento` |
+| Resolvidos | `resolvidos` (resolvido, fechado) |
+| Total | todos os chamados |
+
+Ao clicar em um card, a tabela é filtrada no frontend (sem nova chamada à API).
+
+### Botão "Ver"
+
+Cada linha possui link para `detalhe.html?id={id}`. A tela de detalhe exibe:
+
+- Número, assunto, descrição, status, prioridade, data de abertura
+- Histórico de respostas (`ticket.respostas[]`) quando o GLPI retorna follow-ups
+
+### Responsividade
+
+- **Desktop:** tabela completa com 6 colunas.
+- **Mobile:** tabela oculta; cada chamado vira um card (`tickets-mobile-list`).
+
+### O que ainda pode evoluir
+
+- Nome real do técnico no histórico (hoje exibe "Equipe TVF" quando o GLPI retorna apenas ID numérico).
+- Paginação server-side quando houver muitos chamados (>50).
+- Filtro por busca textual no assunto.
 
 ## Mapeamento GLPI
 

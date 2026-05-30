@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Meus Chamados — TVF</title>
+    <title>Acompanhar Chamados — TVF</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -11,6 +11,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="../chamados/style.css" />
+    <link rel="stylesheet" href="acompanhamento.css" />
   </head>
   <body>
     <div class="support-page">
@@ -22,29 +23,88 @@
         <canvas id="network-canvas" class="support-page__canvas"></canvas>
       </div>
 
-      <main class="support-shell">
-        <header class="support-header">
+      <main class="support-shell support-shell--wide">
+        <header class="track-topbar">
           <div class="brand">
             <img src="../assets/logo.png" alt="TVF Soluções em TI" class="brand__logo" />
           </div>
-          <div class="header-title">
-            <h1>Meus Chamados</h1>
-            <p>Acompanhe suas solicitações de suporte</p>
-          </div>
-          <div class="contact">
-            <a href="#" id="logout-link">Sair</a>
+
+          <div class="track-topbar__contacts">
+            <a href="tel:+5519991708717">(19) 99170-8717</a>
+            <a href="mailto:tvf@tvf.solucoes">@tvf.solucoes</a>
+
+            <div class="track-user-card">
+              <span class="track-user-card__avatar" id="user-avatar" aria-hidden="true">U</span>
+              <div class="track-user-card__info">
+                <strong id="user-greeting">Olá!</strong>
+                <a href="#" id="logout-link">Sair</a>
+              </div>
+            </div>
           </div>
         </header>
 
-        <section class="ticket-panel">
-          <div class="page-actions">
-            <a href="../chamados/index.html">+ Abrir novo chamado</a>
+        <section class="track-hero">
+          <h1>Acompanhe seus chamados em <span>tempo real</span></h1>
+          <p>Transparência e controle total do atendimento.</p>
+        </section>
+
+        <section class="status-cards" aria-label="Filtros por status">
+          <button type="button" class="status-card is-active" data-filter="abertos">
+            <span class="status-card__count" id="count-abertos">0</span>
+            <span class="status-card__label">Abertos</span>
+          </button>
+          <button type="button" class="status-card" data-filter="andamento">
+            <span class="status-card__count" id="count-andamento">0</span>
+            <span class="status-card__label">Em andamento</span>
+          </button>
+          <button type="button" class="status-card" data-filter="resolvidos">
+            <span class="status-card__count" id="count-resolvidos">0</span>
+            <span class="status-card__label">Resolvidos</span>
+          </button>
+          <button type="button" class="status-card" data-filter="total">
+            <span class="status-card__count" id="count-total">0</span>
+            <span class="status-card__label">Total</span>
+          </button>
+        </section>
+
+        <section class="tickets-table-panel" aria-label="Lista de chamados">
+          <p class="form-feedback" id="list-feedback" role="alert" aria-live="polite" hidden></p>
+
+          <div class="tickets-table-wrap">
+            <table class="tickets-table">
+              <thead>
+                <tr>
+                  <th>Nº do Chamado</th>
+                  <th>Assunto</th>
+                  <th>Status</th>
+                  <th>Prioridade</th>
+                  <th>Data</th>
+                  <th>Detalhes</th>
+                </tr>
+              </thead>
+              <tbody id="ticket-table-body"></tbody>
+            </table>
           </div>
 
-          <p class="form-feedback" id="list-feedback" role="alert" aria-live="polite" hidden></p>
-          <ul class="ticket-list" id="ticket-list"></ul>
-          <p class="ticket-panel__security" id="list-empty" hidden>Nenhum chamado encontrado.</p>
+          <div class="tickets-mobile-list" id="ticket-mobile-list"></div>
+
+          <p class="ticket-panel__security" id="list-empty" hidden>Nenhum chamado encontrado para este filtro.</p>
+
+          <div class="track-pagination" id="table-pagination" hidden>
+            <button type="button" id="page-prev" aria-label="Página anterior">&lt;</button>
+            <span id="page-label">Página 1 de 1</span>
+            <button type="button" id="page-next" aria-label="Próxima página">&gt;</button>
+          </div>
         </section>
+
+        <div class="track-footer-actions">
+          <button type="button" class="btn-secondary" id="reload-btn">↻ Recarregar status</button>
+          <a href="../chamados/index.html" class="btn-primary-glow">+ Novo Chamado</a>
+        </div>
+
+        <p class="track-security">
+          Seus dados estão protegidos e serão tratados com segurança.
+        </p>
       </main>
     </div>
 
