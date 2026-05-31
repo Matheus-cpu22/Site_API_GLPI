@@ -289,7 +289,7 @@
 
         state.allTickets = (result.payload.data && result.payload.data.tickets) || [];
         state.allTickets.sort(function (a, b) {
-          return (b.id || 0) - (a.id || 0);
+          return (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0);
         });
         setFeedback("");
 

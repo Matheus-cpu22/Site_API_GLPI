@@ -101,8 +101,8 @@ class GlpiService
             'forcedisplay[4]' => '19',
             'forcedisplay[5]' => '3',
             'forcedisplay[6]' => '21',
-            'sort[0]' => '2',
-            'order[0]' => 'DESC',
+            'sort' => '2',
+            'order' => 'DESC',
             'range' => $rangeStart . '-' . $rangeEnd,
         ]);
     }
@@ -248,7 +248,6 @@ class GlpiService
 
         $safeName = basename($fileName);
         $mime = mime_content_type($filePath) ?: 'application/octet-stream';
-        $file = new CURLFile($filePath, $mime, $safeName);
 
         // Estratégia 1: upload já vinculado ao ticket (formato oficial GLPI).
         $manifestLinked = json_encode([
@@ -261,10 +260,18 @@ class GlpiService
         ], JSON_UNESCAPED_UNICODE);
 
         try {
-            return $this->requestMultipart('POST', 'Document/', [
+            $createdLinked = $this->requestMultipart('POST', 'Document/', [
                 'uploadManifest' => $manifestLinked,
-                'filename' => $file,
+                'filename[0]' => new CURLFile($filePath, $mime, $safeName),
             ]);
+
+            $documentId = (int) ($createdLinked['body']['id'] ?? 0);
+
+            if ($documentId > 0) {
+                $this->ensureDocumentLinked($documentId, $itemsId, $itemtype);
+            }
+
+            return $createdLinked;
         } catch (Throwable $linkedError) {
             // Estratégia 2: cria documento e vincula via Document_Item.
             $manifestOnly = json_encode([
@@ -276,7 +283,7 @@ class GlpiService
 
             $created = $this->requestMultipart('POST', 'Document/', [
                 'uploadManifest' => $manifestOnly,
-                'filename' => $file,
+                'filename[0]' => new CURLFile($filePath, $mime, $safeName),
             ]);
 
             $documentId = (int) ($created['body']['id'] ?? 0);
@@ -297,7 +304,22 @@ class GlpiService
         }
     }
 
-  private function request(string $method, string $endpoint, ?array $body = null, array $extraHeaders = []): array
+    private function ensureDocumentLinked(int $documentId, int $itemsId, string $itemtype): void
+    {
+        try {
+            $this->request('POST', 'Document_Item/', [
+                'input' => [
+                    'documents_id' => $documentId,
+                    'items_id' => $itemsId,
+                    'itemtype' => $itemtype,
+                ],
+            ]);
+        } catch (Throwable) {
+            // O GLPI pode retornar erro quando o upload ja criou esse vinculo.
+        }
+    }
+
+    private function request(string $method, string $endpoint, ?array $body = null, array $extraHeaders = []): array
     {
         $url = $this->buildUrl($endpoint);
         $ch = curl_init($url);
@@ -770,7 +792,7 @@ function buildTicketRequesterInput(int $userId): array
 function sortTicketsById(array $tickets, string $direction = 'DESC'): array
 {
     usort($tickets, static function (array $a, array $b) use ($direction): int {
-        $compare = ($a['id'] ?? 0) <=> ($b['id'] ?? 0);
+        $compare = (int) ($a['id'] ?? 0) <=> (int) ($b['id'] ?? 0);
 
         return $direction === 'DESC' ? -$compare : $compare;
     });
