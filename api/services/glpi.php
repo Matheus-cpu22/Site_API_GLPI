@@ -180,8 +180,9 @@ class GlpiService
         }
 
         $endpoints = [
+            'Document/' . $documentId . '?alt=media',
+            $this->buildGlpiWebUrl('front/document.send.php?docid=' . $documentId),
             'Document/' . $documentId,
-            rtrim(GLPI_URL, '/') . '/front/document.send.php?docid=' . $documentId,
         ];
 
         foreach ($endpoints as $endpoint) {
@@ -192,7 +193,7 @@ class GlpiService
             curl_setopt_array($ch, [
                 CURLOPT_RETURNTRANSFER => true,
                 CURLOPT_HTTPHEADER => array_merge($this->defaultHeaders(false), [
-                    'Accept: application/octet-stream, application/json',
+                    'Accept: application/octet-stream, */*',
                 ]),
                 CURLOPT_FOLLOWLOCATION => true,
                 CURLOPT_TIMEOUT => GLPI_TIMEOUT,
@@ -210,6 +211,11 @@ class GlpiService
             }
 
             $trimmed = ltrim((string) $responseBody);
+            $normalizedContentType = strtolower($contentType);
+
+            if (str_contains($normalizedContentType, 'text/html')) {
+                continue;
+            }
 
             if ($trimmed !== '' && $trimmed[0] !== '{' && $trimmed[0] !== '[') {
                 return [
@@ -402,6 +408,13 @@ class GlpiService
         }
 
         return $this->baseUrl . '/' . ltrim($endpoint, '/');
+    }
+
+    private function buildGlpiWebUrl(string $path): string
+    {
+        $base = preg_replace('#/apirest\.php/?$#', '', $this->baseUrl);
+
+        return rtrim($base ?: $this->baseUrl, '/') . '/' . ltrim($path, '/');
     }
 
     private function executeCurl(CurlHandle $ch, string $url): array

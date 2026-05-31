@@ -58,7 +58,9 @@ try {
     if (!empty($normalizedFiles)) {
         foreach ($normalizedFiles as $file) {
             if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
-                $uploadErrors[] = 'Falha no upload do arquivo: ' . ($file['name'] ?? 'desconhecido');
+                $uploadErrors[] = 'Falha no upload do arquivo: '
+                    . ($file['name'] ?? 'desconhecido')
+                    . ' (' . describeUploadError((int) ($file['error'] ?? UPLOAD_ERR_NO_FILE)) . ')';
                 continue;
             }
 

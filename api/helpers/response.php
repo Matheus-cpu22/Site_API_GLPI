@@ -163,3 +163,17 @@ function collectRequestAttachments(): array
 
     return [];
 }
+
+function describeUploadError(int $errorCode): string
+{
+    return match ($errorCode) {
+        UPLOAD_ERR_INI_SIZE => 'arquivo maior que upload_max_filesize do PHP',
+        UPLOAD_ERR_FORM_SIZE => 'arquivo maior que o limite do formulario',
+        UPLOAD_ERR_PARTIAL => 'upload incompleto',
+        UPLOAD_ERR_NO_FILE => 'nenhum arquivo recebido',
+        UPLOAD_ERR_NO_TMP_DIR => 'pasta temporaria do PHP indisponivel',
+        UPLOAD_ERR_CANT_WRITE => 'falha ao gravar arquivo temporario',
+        UPLOAD_ERR_EXTENSION => 'upload bloqueado por extensao do PHP',
+        default => 'erro PHP ' . $errorCode,
+    };
+}

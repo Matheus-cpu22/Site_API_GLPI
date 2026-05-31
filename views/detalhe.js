@@ -119,7 +119,6 @@
       link.className = "attachment-link";
       link.href = item.download_url || "../api/documento.php?id=" + encodeURIComponent(item.id);
       link.textContent = item.nome || "Anexo #" + item.id;
-      link.setAttribute("download", "");
       link.target = "_blank";
       link.rel = "noopener noreferrer";
 
