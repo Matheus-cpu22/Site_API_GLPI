@@ -78,7 +78,17 @@ try {
             $originalName = sanitizeString($file['name'] ?? 'anexo', 255);
 
             try {
-                $glpi->uploadDocument($ticketId, 'Ticket', $tmpPath, $originalName);
+                $uploaded = $glpi->uploadDocument($ticketId, 'Ticket', $tmpPath, $originalName);
+                $documentId = extractCreatedDocumentId($uploaded['body'] ?? []);
+
+                if ($documentId <= 0) {
+                    $uploadErrors[] = $originalName . ': o GLPI recebeu o upload, mas nÃ£o retornou o ID do documento.';
+                    continue;
+                }
+
+                if (!$glpi->isDocumentLinkedToItem($documentId, $ticketId, 'Ticket')) {
+                    $uploadErrors[] = $originalName . ': documento criado no GLPI, mas nÃ£o vinculado ao chamado.';
+                }
             } catch (Throwable $uploadException) {
                 $uploadErrors[] = $originalName . ': ' . $uploadException->getMessage();
             }

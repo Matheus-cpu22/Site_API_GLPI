@@ -247,7 +247,9 @@ class GlpiService
         }
 
         $safeName = basename($fileName);
-        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+        $mime = function_exists('mime_content_type')
+            ? (mime_content_type($filePath) ?: 'application/octet-stream')
+            : 'application/octet-stream';
 
         // Estratégia 1: upload já vinculado ao ticket (formato oficial GLPI).
         $manifestLinked = json_encode([
@@ -265,7 +267,7 @@ class GlpiService
                 'filename[0]' => new CURLFile($filePath, $mime, $safeName),
             ]);
 
-            $documentId = (int) ($createdLinked['body']['id'] ?? 0);
+            $documentId = extractCreatedDocumentId($createdLinked['body']);
 
             if ($documentId > 0) {
                 $this->ensureDocumentLinked($documentId, $itemsId, $itemtype);
@@ -286,7 +288,7 @@ class GlpiService
                 'filename[0]' => new CURLFile($filePath, $mime, $safeName),
             ]);
 
-            $documentId = (int) ($created['body']['id'] ?? 0);
+            $documentId = extractCreatedDocumentId($created['body']);
 
             if ($documentId <= 0) {
                 throw $linkedError;
@@ -302,6 +304,20 @@ class GlpiService
 
             return $created;
         }
+    }
+
+    public function isDocumentLinkedToItem(int $documentId, int $itemsId, string $itemtype): bool
+    {
+        $documents = $this->listarDocumentos($itemsId);
+        $items = is_array($documents['body']) ? $documents['body'] : [];
+
+        foreach ($items as $item) {
+            if ((int) ($item['id'] ?? 0) === $documentId) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function ensureDocumentLinked(int $documentId, int $itemsId, string $itemtype): void
@@ -798,6 +814,27 @@ function sortTicketsById(array $tickets, string $direction = 'DESC'): array
     });
 
     return $tickets;
+}
+
+function extractCreatedDocumentId(mixed $body): int
+{
+    if (!is_array($body)) {
+        return 0;
+    }
+
+    if (isset($body['id'])) {
+        return is_array($body['id']) ? (int) ($body['id'][0] ?? 0) : (int) $body['id'];
+    }
+
+    if (isset($body[0]) && is_array($body[0])) {
+        return extractCreatedDocumentId($body[0]);
+    }
+
+    if (isset($body['data']) && is_array($body['data'])) {
+        return extractCreatedDocumentId($body['data']);
+    }
+
+    return 0;
 }
 
 /**

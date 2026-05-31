@@ -240,7 +240,9 @@
 
         var message = "Chamado #" + ticketId + " criado com sucesso.";
         if (uploadErrors.length) {
-          message += " Alguns anexos não foram enviados.";
+          message += " Mas alguns anexos não foram enviados: " + uploadErrors.join(" | ");
+          setFormFeedback(message);
+          return;
         }
 
         setFormFeedback(message);
