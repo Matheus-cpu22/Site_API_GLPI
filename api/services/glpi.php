@@ -738,8 +738,12 @@ function normalizeFollowupList(mixed $body): array
             continue;
         }
 
-        $content = strip_tags((string) ($followup['content'] ?? ''));
-        if ($content === '') {
+        $rawContent = (string) ($followup['content'] ?? '');
+        $decodedContent = decodeGlpiHtmlContent($rawContent);
+        $images = extractFollowupImages($decodedContent);
+        $content = normalizeGlpiTextContent($decodedContent);
+
+        if ($content === '' && empty($images)) {
             continue;
         }
 
@@ -753,6 +757,7 @@ function normalizeFollowupList(mixed $body): array
         $items[] = [
             'autor' => (string) $author,
             'mensagem' => $content,
+            'imagens' => $images,
             'data' => formatGlpiDateLabel($date),
             'data_raw' => $date,
         ];
@@ -763,6 +768,84 @@ function normalizeFollowupList(mixed $body): array
     });
 
     return $items;
+}
+
+function decodeGlpiHtmlContent(string $content): string
+{
+    $decoded = $content;
+
+    for ($i = 0; $i < 2; $i += 1) {
+        $next = html_entity_decode($decoded, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+
+        if ($next === $decoded) {
+            break;
+        }
+
+        $decoded = $next;
+    }
+
+    return $decoded;
+}
+
+function normalizeGlpiTextContent(string $content): string
+{
+    $content = preg_replace('#<\s*br\s*/?\s*>#i', "\n", $content) ?? $content;
+    $content = preg_replace('#</\s*p\s*>#i', "\n", $content) ?? $content;
+    $content = preg_replace('#<\s*p(?:\s[^>]*)?>#i', '', $content) ?? $content;
+    $content = strip_tags($content);
+    $content = html_entity_decode($content, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $content = preg_replace("/[ \t]+\n/", "\n", $content) ?? $content;
+    $content = preg_replace("/\n{3,}/", "\n\n", $content) ?? $content;
+
+    return trim($content);
+}
+
+function extractFollowupImages(string $content): array
+{
+    $images = [];
+
+    if (!preg_match_all('#<img\b[^>]*\bsrc\s*=\s*(["\'])(.*?)\1[^>]*>#i', $content, $matches, PREG_SET_ORDER)) {
+        return $images;
+    }
+
+    foreach ($matches as $match) {
+        $src = html_entity_decode((string) ($match[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $url = normalizeGlpiImageUrl($src);
+
+        if ($url === '') {
+            continue;
+        }
+
+        $images[] = [
+            'url' => $url,
+            'nome' => 'Imagem da resposta',
+        ];
+    }
+
+    return $images;
+}
+
+function normalizeGlpiImageUrl(string $src): string
+{
+    $src = trim($src);
+
+    if ($src === '') {
+        return '';
+    }
+
+    if (str_starts_with($src, 'data:image/')) {
+        return $src;
+    }
+
+    $query = parse_url($src, PHP_URL_QUERY);
+    parse_str(is_string($query) ? $query : '', $params);
+    $documentId = (int) ($params['docid'] ?? $params['id'] ?? 0);
+
+    if ($documentId > 0) {
+        return '../api/documento.php?id=' . $documentId;
+    }
+
+    return '';
 }
 
 /**

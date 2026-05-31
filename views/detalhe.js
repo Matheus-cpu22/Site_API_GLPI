@@ -65,9 +65,16 @@
       "</span>";
   }
 
+  function appendText(parent, className, value) {
+    var el = document.createElement("p");
+    el.className = className;
+    el.textContent = value || "";
+    parent.appendChild(el);
+  }
+
   /**
    * Renderiza array de respostas retornado pela API.
-   * Formato esperado: { autor, mensagem, data }
+   * Formato esperado: { autor, mensagem, data, imagens[] }
    */
   function renderHistory(respostas) {
     if (!historyList) return;
@@ -83,19 +90,39 @@
 
     respostas.forEach(function (item) {
       var li = document.createElement("li");
+      var head = document.createElement("div");
+      var author = document.createElement("span");
+      var date = document.createElement("span");
+
       li.className = "history-item";
-      li.innerHTML =
-        '<div class="history-item__head">' +
-        '<span class="history-item__author">' +
-        (item.autor || "Equipe TVF") +
-        "</span>" +
-        '<span class="history-item__date">' +
-        (item.data || "-") +
-        "</span>" +
-        "</div>" +
-        '<p class="history-item__message">' +
-        (item.mensagem || "") +
-        "</p>";
+      head.className = "history-item__head";
+      author.className = "history-item__author";
+      date.className = "history-item__date";
+      author.textContent = item.autor || "Equipe TVF";
+      date.textContent = item.data || "-";
+      head.appendChild(author);
+      head.appendChild(date);
+      li.appendChild(head);
+
+      if (item.mensagem) {
+        appendText(li, "history-item__message", item.mensagem);
+      }
+
+      if (item.imagens && item.imagens.length) {
+        var media = document.createElement("div");
+        media.className = "history-item__media";
+
+        item.imagens.forEach(function (image) {
+          var img = document.createElement("img");
+          img.src = image.url;
+          img.alt = image.nome || "Imagem da resposta";
+          img.loading = "lazy";
+          media.appendChild(img);
+        });
+
+        li.appendChild(media);
+      }
+
       historyList.appendChild(li);
     });
   }
