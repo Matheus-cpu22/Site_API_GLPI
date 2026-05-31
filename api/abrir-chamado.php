@@ -29,14 +29,13 @@ if ($titulo === '') {
     $titulo = 'Chamado via portal - ' . date('d/m/Y H:i');
 }
 
-$ticketInput = [
+$ticketInput = array_merge([
     'name' => $titulo,
     'content' => $descricao,
     'type' => mapTicketTypeToGlpi($ticketType !== '' ? $ticketType : null),
     'urgency' => mapUrgencyToGlpi($urgencyKey !== '' ? $urgencyKey : null),
     'priority' => mapUrgencyToGlpi($urgencyKey !== '' ? $urgencyKey : null),
-    '_users_id_requester' => $userId,
-];
+], buildTicketRequesterInput($userId));
 
 if ($categoria > 0) {
     $ticketInput['itilcategories_id'] = $categoria;
@@ -54,15 +53,10 @@ try {
     $uploadErrors = [];
     $maxBytes = 40 * 1024 * 1024;
     $totalSize = 0;
+    $normalizedFiles = collectRequestAttachments();
 
-    if ($isMultipart && !empty($_FILES['attachments'])) {
-        $normalizedFiles = normalizeUploadedFiles($_FILES['attachments']);
-
+    if (!empty($normalizedFiles)) {
         foreach ($normalizedFiles as $file) {
-            if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
-                continue;
-            }
-
             if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
                 $uploadErrors[] = 'Falha no upload do arquivo: ' . ($file['name'] ?? 'desconhecido');
                 continue;
@@ -76,7 +70,7 @@ try {
         }
 
         foreach ($normalizedFiles as $file) {
-            if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            if (($file['error'] ?? UPLOAD_ERR_OK) !== UPLOAD_ERR_OK) {
                 continue;
             }
 

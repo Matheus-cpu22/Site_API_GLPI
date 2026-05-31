@@ -111,3 +111,55 @@ function normalizeUploadedFiles(array $fileField): array
 
     return $files;
 }
+
+/**
+ * Coleta anexos enviados pelo formulário (suporta attachments e attachments[]).
+ *
+ * @return array<int, array{name: string, type: string, tmp_name: string, error: int, size: int}>
+ */
+function collectRequestAttachments(): array
+{
+    if (empty($_FILES)) {
+        return [];
+    }
+
+    foreach (['attachments', 'attachments[]'] as $fieldName) {
+        if (empty($_FILES[$fieldName]) || !is_array($_FILES[$fieldName])) {
+            continue;
+        }
+
+        $files = normalizeUploadedFiles($_FILES[$fieldName]);
+        $valid = [];
+
+        foreach ($files as $file) {
+            if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $valid[] = $file;
+            }
+        }
+
+        if (!empty($valid)) {
+            return $valid;
+        }
+    }
+
+    foreach ($_FILES as $field) {
+        if (!is_array($field)) {
+            continue;
+        }
+
+        $files = normalizeUploadedFiles($field);
+        $valid = [];
+
+        foreach ($files as $file) {
+            if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+                $valid[] = $file;
+            }
+        }
+
+        if (!empty($valid)) {
+            return $valid;
+        }
+    }
+
+    return [];
+}

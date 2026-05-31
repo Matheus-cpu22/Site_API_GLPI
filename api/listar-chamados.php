@@ -16,6 +16,7 @@ if (!in_array($method, ['GET', 'POST'], true)) {
 }
 
 $userId = getAuthenticatedUserId();
+$userLogin = getAuthenticatedUserLogin();
 $rangeStart = 0;
 $rangeEnd = 49;
 
@@ -25,14 +26,28 @@ if ($method === 'POST') {
     $rangeEnd = max($rangeStart, sanitizeInt($input['range_end'] ?? 49));
 }
 
+if ($userId <= 0) {
+    errorResponse('Usuário da sessão inválido. Faça login novamente.', 401);
+}
+
 try {
     $glpi = new GlpiService(getSessionToken());
-    $result = $glpi->listarChamados($userId, $rangeStart, $rangeEnd);
-    $tickets = normalizeTicketSearchResult($result['body']);
+    $result = $glpi->listarChamados($userId, $userLogin, $rangeStart, $rangeEnd);
+    $body = is_array($result['body']) ? $result['body'] : [];
+
+    // Search/Ticket retorna { data: [...] }; Ticket/ retorna lista direta de objetos.
+    $tickets = normalizeTicketSearchResult($body);
+
+    if (empty($tickets)) {
+        $tickets = normalizeTicketRestList($body, $userId);
+    }
+
+    $tickets = sortTicketsById($tickets, 'DESC');
 
     successResponse('Chamados listados com sucesso.', [
         'tickets' => $tickets,
-        'total' => (int) ($result['body']['totalcount'] ?? count($tickets)),
+        'total' => (int) ($body['totalcount'] ?? count($tickets)),
+        'user_id' => $userId,
     ]);
 } catch (Throwable $exception) {
     $code = $exception->getCode();

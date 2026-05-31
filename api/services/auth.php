@@ -65,6 +65,11 @@ function getAuthenticatedUser(): array
     ];
 }
 
+function getAuthenticatedUserLogin(): string
+{
+    return (string) ($_SESSION['glpi_user_login'] ?? '');
+}
+
 function clearPortalSession(): void
 {
     $_SESSION = [];

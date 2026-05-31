@@ -55,23 +55,56 @@ class GlpiService
     }
 
     /**
-     * Lista chamados do solicitante informado.
+     * Lista chamados do solicitante informado (múltiplas estratégias compatíveis com GLPI 10).
      */
-    public function listarChamados(int $userId, int $rangeStart = 0, int $rangeEnd = 49): array
+    public function listarChamados(int $userId, ?string $userLogin = null, int $rangeStart = 0, int $rangeEnd = 49): array
     {
-        $query = http_build_query([
-            'criteria[0][field]' => '4',
+        $attempts = [];
+
+        if ($userId > 0) {
+            $attempts[] = $this->buildTicketSearchQuery(4, (string) $userId, $rangeStart, $rangeEnd);
+            $attempts[] = $this->buildTicketSearchQuery(71, (string) $userId, $rangeStart, $rangeEnd);
+        }
+
+        if ($userLogin !== null && $userLogin !== '') {
+            $attempts[] = $this->buildTicketSearchQuery(4, $userLogin, $rangeStart, $rangeEnd);
+        }
+
+        foreach ($attempts as $query) {
+            try {
+                $result = $this->request('GET', 'search/Ticket?' . $query);
+                $rows = normalizeTicketSearchResult($result['body']);
+
+                if (!empty($rows)) {
+                    return $result;
+                }
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        // Fallback: tickets visíveis ao perfil do usuário logado no GLPI.
+        return $this->request('GET', 'Ticket/?range=' . $rangeStart . '-' . $rangeEnd . '&sort=id&order=DESC');
+    }
+
+    private function buildTicketSearchQuery(int $field, string $value, int $rangeStart, int $rangeEnd): string
+    {
+        return http_build_query([
+            'criteria[0][link]' => 'AND',
+            'criteria[0][field]' => $field,
             'criteria[0][searchtype]' => 'equals',
-            'criteria[0][value]' => $userId,
-            'forcedisplay[0]' => '1',
-            'forcedisplay[1]' => '2',
+            'criteria[0][value]' => $value,
+            'forcedisplay[0]' => '2',
+            'forcedisplay[1]' => '1',
             'forcedisplay[2]' => '12',
             'forcedisplay[3]' => '15',
-            'forcedisplay[4]' => '21',
+            'forcedisplay[4]' => '19',
+            'forcedisplay[5]' => '3',
+            'forcedisplay[6]' => '21',
+            'sort[0]' => '2',
+            'order[0]' => 'DESC',
             'range' => $rangeStart . '-' . $rangeEnd,
         ]);
-
-        return $this->request('GET', 'search/Ticket?' . $query);
     }
 
     /**
@@ -83,7 +116,129 @@ class GlpiService
     }
 
     /**
-     * Anexa documento a um item (ex.: Ticket).
+     * Lista follow-ups (respostas/interações) vinculados ao chamado.
+     */
+    public function listarFollowups(int $ticketId): array
+    {
+        return $this->request('GET', 'Ticket/' . $ticketId . '/ITILFollowup/');
+    }
+
+    /**
+     * Lista documentos/anexos vinculados ao chamado.
+     */
+    public function listarDocumentos(int $ticketId): array
+    {
+        $endpoints = [
+            'Ticket/' . $ticketId . '/Document_Item/',
+            'Ticket/' . $ticketId . '/Document/',
+        ];
+
+        foreach ($endpoints as $endpoint) {
+            try {
+                $result = $this->request('GET', $endpoint);
+                $items = normalizeDocumentList($this, $result['body']);
+
+                if (!empty($items)) {
+                    return ['http_code' => $result['http_code'], 'body' => $items, 'raw' => $result['raw']];
+                }
+            } catch (Throwable) {
+                continue;
+            }
+        }
+
+        return ['http_code' => 200, 'body' => [], 'raw' => '[]'];
+    }
+
+    /**
+     * Busca metadados de um documento.
+     */
+    public function buscarDocumento(int $documentId): array
+    {
+        return $this->request('GET', 'Document/' . $documentId);
+    }
+
+    /**
+     * Baixa conteúdo binário de um documento do GLPI.
+     */
+    public function downloadDocumento(int $documentId): array
+    {
+        $meta = $this->buscarDocumento($documentId);
+        $body = is_array($meta['body']) ? $meta['body'] : [];
+        $filename = (string) ($body['filename'] ?? $body['name'] ?? ('anexo-' . $documentId));
+        $mime = (string) ($body['mime'] ?? 'application/octet-stream');
+
+        if (!empty($body['content']) && is_string($body['content'])) {
+            $decoded = base64_decode($body['content'], true);
+
+            if ($decoded !== false && $decoded !== '') {
+                return [
+                    'filename' => $filename,
+                    'content' => $decoded,
+                    'content_type' => $mime,
+                ];
+            }
+        }
+
+        $endpoints = [
+            'Document/' . $documentId,
+            rtrim(GLPI_URL, '/') . '/front/document.send.php?docid=' . $documentId,
+        ];
+
+        foreach ($endpoints as $endpoint) {
+            $isAbsolute = str_starts_with($endpoint, 'http');
+            $url = $isAbsolute ? $endpoint : $this->buildUrl($endpoint);
+            $ch = curl_init($url);
+
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_HTTPHEADER => array_merge($this->defaultHeaders(false), [
+                    'Accept: application/octet-stream, application/json',
+                ]),
+                CURLOPT_FOLLOWLOCATION => true,
+                CURLOPT_TIMEOUT => GLPI_TIMEOUT,
+                CURLOPT_CONNECTTIMEOUT => 10,
+            ]);
+
+            $responseBody = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $contentType = (string) curl_getinfo($ch, CURLINFO_CONTENT_TYPE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($responseBody === false || $httpCode >= 400) {
+                continue;
+            }
+
+            $trimmed = ltrim((string) $responseBody);
+
+            if ($trimmed !== '' && $trimmed[0] !== '{' && $trimmed[0] !== '[') {
+                return [
+                    'filename' => $filename,
+                    'content' => $responseBody,
+                    'content_type' => $contentType !== '' ? $contentType : $mime,
+                ];
+            }
+
+            $json = json_decode((string) $responseBody, true);
+
+            if (is_array($json) && !empty($json['content']) && is_string($json['content'])) {
+                $decoded = base64_decode($json['content'], true);
+
+                if ($decoded !== false && $decoded !== '') {
+                    return [
+                        'filename' => (string) ($json['filename'] ?? $filename),
+                        'content' => $decoded,
+                        'content_type' => (string) ($json['mime'] ?? $mime),
+                    ];
+                }
+            }
+        }
+
+        throw new RuntimeException('Documento não disponível para download.', 404);
+    }
+
+    /**
+     * Anexa documento a um chamado (GLPI 10 — upload + vínculo quando necessário).
      */
     public function uploadDocument(int $itemsId, string $itemtype, string $filePath, string $fileName): array
     {
@@ -91,21 +246,55 @@ class GlpiService
             throw new RuntimeException('Arquivo não encontrado para upload.');
         }
 
-        $manifest = json_encode([
+        $safeName = basename($fileName);
+        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
+        $file = new CURLFile($filePath, $mime, $safeName);
+
+        // Estratégia 1: upload já vinculado ao ticket (formato oficial GLPI).
+        $manifestLinked = json_encode([
             'input' => [
-                'name' => $fileName,
-                'items_id' => $itemsId,
+                'name' => $safeName,
+                '_filename' => [$safeName],
                 'itemtype' => $itemtype,
+                'items_id' => $itemsId,
             ],
         ], JSON_UNESCAPED_UNICODE);
 
-        $mime = mime_content_type($filePath) ?: 'application/octet-stream';
-        $file = new CURLFile($filePath, $mime, $fileName);
+        try {
+            return $this->requestMultipart('POST', 'Document/', [
+                'uploadManifest' => $manifestLinked,
+                'filename' => $file,
+            ]);
+        } catch (Throwable $linkedError) {
+            // Estratégia 2: cria documento e vincula via Document_Item.
+            $manifestOnly = json_encode([
+                'input' => [
+                    'name' => $safeName,
+                    '_filename' => [$safeName],
+                ],
+            ], JSON_UNESCAPED_UNICODE);
 
-        return $this->requestMultipart('POST', 'Document/', [
-            'uploadManifest' => $manifest,
-            'filename' => $file,
-        ]);
+            $created = $this->requestMultipart('POST', 'Document/', [
+                'uploadManifest' => $manifestOnly,
+                'filename' => $file,
+            ]);
+
+            $documentId = (int) ($created['body']['id'] ?? 0);
+
+            if ($documentId <= 0) {
+                throw $linkedError;
+            }
+
+            $this->request('POST', 'Document_Item/', [
+                'input' => [
+                    'documents_id' => $documentId,
+                    'items_id' => $itemsId,
+                    'itemtype' => $itemtype,
+                ],
+            ]);
+
+            return $created;
+        }
     }
 
   private function request(string $method, string $endpoint, ?array $body = null, array $extraHeaders = []): array
@@ -139,7 +328,7 @@ class GlpiService
 
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_POST => true,
             CURLOPT_HTTPHEADER => $headers,
             CURLOPT_POSTFIELDS => $fields,
             CURLOPT_TIMEOUT => GLPI_TIMEOUT,
@@ -242,29 +431,287 @@ function mapTicketTypeToGlpi(?string $type): int
  */
 function normalizeTicketSearchResult(array $searchBody): array
 {
+    $rawRows = extractGlpiSearchRows($searchBody);
     $rows = [];
-    $data = $searchBody['data'] ?? [];
-    $rawRows = $data['data'] ?? $data;
-
-    if (!is_array($rawRows)) {
-        return [];
-    }
 
     foreach ($rawRows as $row) {
         if (!is_array($row)) {
             continue;
         }
 
-        $rows[] = [
-            'id' => (int) ($row['2'] ?? $row['id'] ?? 0),
-            'titulo' => (string) ($row['1'] ?? $row['name'] ?? ''),
-            'status' => (string) ($row['12'] ?? ''),
-            'data_abertura' => (string) ($row['15'] ?? ''),
-            'urgencia' => (string) ($row['21'] ?? ''),
-        ];
+        $ticket = normalizeTicketRow($row);
+        if ($ticket['id'] > 0) {
+            $rows[] = $ticket;
+        }
     }
 
     return $rows;
+}
+
+/**
+ * Normaliza resposta do endpoint REST Ticket/ (lista direta).
+ */
+function normalizeTicketRestList(mixed $body, int $userId = 0): array
+{
+    if (!is_array($body)) {
+        return [];
+    }
+
+    $items = array_is_list($body) ? $body : [$body];
+    $rows = [];
+
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $ticket = normalizeTicketFromRestItem($item);
+
+        if ($userId > 0 && $ticket['solicitante_id'] > 0 && $ticket['solicitante_id'] !== $userId) {
+            continue;
+        }
+
+        if ($ticket['id'] > 0) {
+            $rows[] = $ticket;
+        }
+    }
+
+    return $rows;
+}
+
+function extractGlpiSearchRows(array $searchBody): array
+{
+    if (isset($searchBody['data']) && is_array($searchBody['data'])) {
+        if (array_is_list($searchBody['data'])) {
+            return $searchBody['data'];
+        }
+
+        if (isset($searchBody['data']['data']) && is_array($searchBody['data']['data'])) {
+            return $searchBody['data']['data'];
+        }
+    }
+
+    return [];
+}
+
+function normalizeTicketRow(array $row): array
+{
+    $id = (int) ($row['2'] ?? $row['id'] ?? 0);
+    $title = (string) ($row['1'] ?? $row['name'] ?? '');
+    $statusRaw = $row['12'] ?? $row['status'] ?? 0;
+    $statusCode = is_numeric($statusRaw) ? (int) $statusRaw : mapGlpiStatusLabelToCode((string) $statusRaw);
+    $priorityCode = (int) ($row['3'] ?? $row['priority'] ?? 0);
+    $urgencyCode = (int) ($row['21'] ?? $row['urgency'] ?? 0);
+    $dateOpen = (string) ($row['15'] ?? $row['date'] ?? '');
+    $dateMod = (string) ($row['19'] ?? $row['date_mod'] ?? '');
+
+    return buildNormalizedTicket(
+        $id,
+        $title,
+        $statusCode,
+        $priorityCode,
+        $urgencyCode,
+        $dateOpen,
+        $dateMod,
+        (int) ($row['solicitante_id'] ?? 0)
+    );
+}
+
+function normalizeTicketFromRestItem(array $item): array
+{
+    $requester = extractTicketRequesterId($item);
+
+    return buildNormalizedTicket(
+        (int) ($item['id'] ?? 0),
+        (string) ($item['name'] ?? ''),
+        (int) ($item['status'] ?? 0),
+        (int) ($item['priority'] ?? 0),
+        (int) ($item['urgency'] ?? 0),
+        (string) ($item['date'] ?? ''),
+        (string) ($item['date_mod'] ?? ''),
+        $requester
+    );
+}
+
+function buildNormalizedTicket(
+    int $id,
+    string $title,
+    int $statusCode,
+    int $priorityCode,
+    int $urgencyCode,
+    string $dateOpen,
+    string $dateMod,
+    int $requesterId = 0
+): array {
+    $dateReference = $dateMod !== '' ? $dateMod : $dateOpen;
+
+    return [
+        'id' => $id,
+        'titulo' => $title !== '' ? $title : 'Sem título',
+        'status' => mapGlpiStatusLabel($statusCode),
+        'status_code' => $statusCode,
+        'status_grupo' => mapGlpiStatusGroup($statusCode),
+        'prioridade' => mapGlpiPriorityLabel($priorityCode, $urgencyCode),
+        'data_abertura' => $dateOpen,
+        'data_atualizacao' => $dateReference,
+        'data_label' => formatGlpiDateLabel($dateReference),
+        'urgencia' => (string) $urgencyCode,
+        'solicitante_id' => $requesterId,
+    ];
+}
+
+function extractTicketRequesterId(array $ticket): int
+{
+    if (isset($ticket['_users_id_requester'])) {
+        $requester = $ticket['_users_id_requester'];
+        return is_array($requester) ? (int) ($requester['id'] ?? 0) : (int) $requester;
+    }
+
+    if (isset($ticket['_actors']['requester'][0]['items_id'])) {
+        return (int) $ticket['_actors']['requester'][0]['items_id'];
+    }
+
+    return 0;
+}
+
+function mapGlpiStatusLabel(int $status): string
+{
+    return match ($status) {
+        1 => 'Aberto',
+        2, 3 => 'Em andamento',
+        4 => 'Pendente',
+        5 => 'Resolvido',
+        6 => 'Fechado',
+        default => 'Aberto',
+    };
+}
+
+function mapGlpiStatusLabelToCode(string $label): int
+{
+    $normalized = mb_strtolower(trim($label));
+
+    return match (true) {
+        str_contains($normalized, 'fech') => 6,
+        str_contains($normalized, 'resolv') => 5,
+        str_contains($normalized, 'pend') => 4,
+        str_contains($normalized, 'andamento'), str_contains($normalized, 'process') => 2,
+        default => 1,
+    };
+}
+
+function mapGlpiStatusGroup(int $status): string
+{
+    return match ($status) {
+        1, 4 => 'abertos',
+        2, 3 => 'andamento',
+        5, 6 => 'resolvidos',
+        default => 'abertos',
+    };
+}
+
+function mapGlpiUrgencyLabel(int $urgency): string
+{
+    return match ($urgency) {
+        1, 2 => 'Baixa',
+        3 => 'Média',
+        4, 5 => 'Alta',
+        default => 'Média',
+    };
+}
+
+function mapGlpiPriorityLabel(int $priority, int $urgency): string
+{
+    if ($priority > 0) {
+        return match ($priority) {
+            1, 2 => 'Baixa',
+            3 => 'Média',
+            4, 5, 6 => 'Alta',
+            default => mapGlpiUrgencyLabel($urgency),
+        };
+    }
+
+    return mapGlpiUrgencyLabel($urgency);
+}
+
+function formatGlpiDateLabel(string $dateValue): string
+{
+    if ($dateValue === '') {
+        return '-';
+    }
+
+    $timestamp = strtotime($dateValue);
+
+    if ($timestamp === false) {
+        return $dateValue;
+    }
+
+    $diff = time() - $timestamp;
+
+    if ($diff < 3600) {
+        $mins = max(1, (int) floor($diff / 60));
+        return 'Atualizado há ' . $mins . ' min';
+    }
+
+    if ($diff < 86400) {
+        $hours = max(1, (int) floor($diff / 3600));
+        return 'Atualizado há ' . $hours . ' h';
+    }
+
+    if ($diff < 604800) {
+        $days = max(1, (int) floor($diff / 86400));
+        return 'Atualizado há ' . $days . ' dia' . ($days > 1 ? 's' : '');
+    }
+
+    return date('d/m/Y H:i', $timestamp);
+}
+
+/**
+ * Normaliza follow-ups do GLPI para exibição no portal.
+ */
+function normalizeFollowupList(mixed $body): array
+{
+    $items = [];
+
+    if (!is_array($body)) {
+        return $items;
+    }
+
+    $list = isset($body['data']) && is_array($body['data']) ? $body['data'] : $body;
+
+    if (!is_array($list)) {
+        return $items;
+    }
+
+    foreach ($list as $followup) {
+        if (!is_array($followup)) {
+            continue;
+        }
+
+        $content = strip_tags((string) ($followup['content'] ?? ''));
+        if ($content === '') {
+            continue;
+        }
+
+        $author = $followup['users_id'] ?? 'Equipe TVF';
+        if (is_numeric($author)) {
+            $author = 'Equipe TVF';
+        }
+
+        $date = (string) ($followup['date'] ?? $followup['date_mod'] ?? '');
+
+        $items[] = [
+            'autor' => (string) $author,
+            'mensagem' => $content,
+            'data' => formatGlpiDateLabel($date),
+            'data_raw' => $date,
+        ];
+    }
+
+    usort($items, static function (array $a, array $b): int {
+        return strcmp($a['data_raw'] ?? '', $b['data_raw'] ?? '');
+    });
+
+    return $items;
 }
 
 /**
@@ -272,16 +719,120 @@ function normalizeTicketSearchResult(array $searchBody): array
  */
 function normalizeTicketDetail(array $ticket): array
 {
+    $statusCode = (int) ($ticket['status'] ?? 0);
+    $urgencyCode = (int) ($ticket['urgency'] ?? 0);
+    $priorityCode = (int) ($ticket['priority'] ?? 0);
+    $requesterId = extractTicketRequesterId($ticket);
+
     return [
         'id' => (int) ($ticket['id'] ?? 0),
         'titulo' => (string) ($ticket['name'] ?? ''),
-        'descricao' => (string) ($ticket['content'] ?? ''),
-        'status' => (int) ($ticket['status'] ?? 0),
-        'urgencia' => (int) ($ticket['urgency'] ?? 0),
-        'prioridade' => (int) ($ticket['priority'] ?? 0),
+        'descricao' => strip_tags((string) ($ticket['content'] ?? '')),
+        'status' => mapGlpiStatusLabel($statusCode),
+        'status_code' => $statusCode,
+        'status_grupo' => mapGlpiStatusGroup($statusCode),
+        'urgencia' => $urgencyCode,
+        'urgencia_label' => mapGlpiUrgencyLabel($urgencyCode),
+        'prioridade' => mapGlpiPriorityLabel($priorityCode, $urgencyCode),
         'tipo' => (int) ($ticket['type'] ?? 0),
         'data_abertura' => (string) ($ticket['date'] ?? ''),
         'data_modificacao' => (string) ($ticket['date_mod'] ?? ''),
-        'solicitante_id' => (int) ($ticket['_users_id_requester'] ?? 0),
+        'data_label' => formatGlpiDateLabel((string) ($ticket['date_mod'] ?? $ticket['date'] ?? '')),
+        'solicitante_id' => $requesterId,
+        'respostas' => [],
+        'anexos' => [],
     ];
+}
+
+function buildTicketRequesterInput(int $userId): array
+{
+    if ($userId <= 0) {
+        return [];
+    }
+
+    return [
+        '_users_id_requester' => $userId,
+        '_actors' => [
+            'requester' => [
+                [
+                    'itemtype' => 'User',
+                    'items_id' => $userId,
+                    'use_notification' => 1,
+                ],
+            ],
+        ],
+    ];
+}
+
+/**
+ * Ordena chamados pelo número (ID) — padrão: maior número primeiro.
+ */
+function sortTicketsById(array $tickets, string $direction = 'DESC'): array
+{
+    usort($tickets, static function (array $a, array $b) use ($direction): int {
+        $compare = ($a['id'] ?? 0) <=> ($b['id'] ?? 0);
+
+        return $direction === 'DESC' ? -$compare : $compare;
+    });
+
+    return $tickets;
+}
+
+/**
+ * Normaliza lista de documentos vinculados a um chamado.
+ */
+function normalizeDocumentList(GlpiService $glpi, mixed $body): array
+{
+    if (!is_array($body)) {
+        return [];
+    }
+
+    $list = isset($body['data']) && is_array($body['data']) ? $body['data'] : $body;
+
+    if (!is_array($list)) {
+        return [];
+    }
+
+    if (!array_is_list($list)) {
+        $list = [$list];
+    }
+
+    $documents = [];
+    $seen = [];
+
+    foreach ($list as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $documentId = (int) ($item['documents_id'] ?? $item['id'] ?? 0);
+        $name = (string) ($item['name'] ?? $item['filename'] ?? '');
+
+        if ($documentId <= 0) {
+            continue;
+        }
+
+        if (isset($seen[$documentId])) {
+            continue;
+        }
+
+        if ($name === '') {
+            try {
+                $meta = $glpi->buscarDocumento($documentId);
+                $metaBody = is_array($meta['body']) ? $meta['body'] : [];
+                $name = (string) ($metaBody['filename'] ?? $metaBody['name'] ?? ('Anexo #' . $documentId));
+            } catch (Throwable) {
+                $name = 'Anexo #' . $documentId;
+            }
+        }
+
+        $seen[$documentId] = true;
+        $documents[] = [
+            'id' => $documentId,
+            'nome' => $name,
+            'download_url' => '../api/documento.php?id=' . $documentId,
+        ];
+    }
+
+    return $documents;
 }

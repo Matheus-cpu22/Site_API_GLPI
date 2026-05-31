@@ -44,7 +44,7 @@
           return;
         }
 
-        window.location.href = "../chamados/index.html";
+        window.location.href = "../views/chamados.html";
       })
       .catch(function () {
         setFeedback(

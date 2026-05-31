@@ -37,6 +37,20 @@ try {
         errorResponse('Você não tem permissão para visualizar este chamado.', 403);
     }
 
+    try {
+        $followups = $glpi->listarFollowups($ticketId);
+        $ticket['respostas'] = normalizeFollowupList($followups['body']);
+    } catch (Throwable) {
+        $ticket['respostas'] = [];
+    }
+
+    try {
+        $documents = $glpi->listarDocumentos($ticketId);
+        $ticket['anexos'] = is_array($documents['body']) ? $documents['body'] : [];
+    } catch (Throwable) {
+        $ticket['anexos'] = [];
+    }
+
     successResponse('Detalhes do chamado obtidos com sucesso.', [
         'ticket' => $ticket,
     ]);

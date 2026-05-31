@@ -6,6 +6,8 @@
   var badgesEl = document.getElementById("detail-badges");
   var historyList = document.getElementById("detail-history-list");
   var historyEmpty = document.getElementById("detail-history-empty");
+  var attachmentsList = document.getElementById("detail-attachments-list");
+  var attachmentsEmpty = document.getElementById("detail-attachments-empty");
 
   function setFeedback(message) {
     if (!feedbackEl) return;
@@ -98,6 +100,34 @@
     });
   }
 
+  function renderAttachments(anexos) {
+    if (!attachmentsList) return;
+
+    attachmentsList.innerHTML = "";
+
+    if (!anexos || !anexos.length) {
+      if (attachmentsEmpty) attachmentsEmpty.hidden = false;
+      return;
+    }
+
+    if (attachmentsEmpty) attachmentsEmpty.hidden = true;
+
+    anexos.forEach(function (item) {
+      var li = document.createElement("li");
+      var link = document.createElement("a");
+
+      link.className = "attachment-link";
+      link.href = item.download_url || "../api/documento.php?id=" + encodeURIComponent(item.id);
+      link.textContent = item.nome || "Anexo #" + item.id;
+      link.setAttribute("download", "");
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+
+      li.appendChild(link);
+      attachmentsList.appendChild(li);
+    });
+  }
+
   var ticketId = getTicketIdFromQuery();
 
   if (!ticketId) {
@@ -138,6 +168,7 @@
       setText("detail-date", ticket.data_abertura || "-");
 
       renderBadges(ticket);
+      renderAttachments(ticket.anexos || []);
       renderHistory(ticket.respostas || []);
 
       if (contentEl) contentEl.hidden = false;

@@ -29,16 +29,21 @@ try {
     $glpiAuthenticated = new GlpiService($sessionToken);
     $fullSession = $glpiAuthenticated->getFullSession();
     $sessionData = $fullSession['body']['session'] ?? $fullSession['body'] ?? [];
-    $glpiUser = $sessionData['glpiID'] ?? $sessionData['id'] ?? null;
+    $glpiUserId = (int) (
+        $sessionData['glpiID']
+        ?? $sessionData['id']
+        ?? $sessionData['glpiactiveprofile']['users_id']
+        ?? 0
+    );
 
-    if ($glpiUser === null) {
+    if ($glpiUserId <= 0) {
         $glpiAuthenticated->killSession();
-        errorResponse('Sessão GLPI inválida.', 401);
+        errorResponse('Sessão GLPI inválida: ID do usuário não encontrado.', 401);
     }
 
     $user = [
-        'id' => (int) ($sessionData['glpiID'] ?? $sessionData['id'] ?? 0),
-        'name' => (string) ($sessionData['glpifriendlyname'] ?? $sessionData['glpiname'] ?? $login),
+        'id' => $glpiUserId,
+        'name' => (string) ($sessionData['glpifriendlyname'] ?? $sessionData['glpirealname'] ?? $sessionData['glpiname'] ?? $login),
         'login' => (string) ($sessionData['glpiname'] ?? $login),
     ];
 

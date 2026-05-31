@@ -4,7 +4,7 @@
   var PAGE_SIZE = 6;
   var state = {
     allTickets: [],
-    activeFilter: "total",
+    activeFilter: "abertos",
     currentPage: 1,
   };
 
@@ -288,7 +288,19 @@
         }
 
         state.allTickets = (result.payload.data && result.payload.data.tickets) || [];
+        state.allTickets.sort(function (a, b) {
+          return (b.id || 0) - (a.id || 0);
+        });
         setFeedback("");
+
+        if (!state.allTickets.length) {
+          if (emptyEl) {
+            emptyEl.hidden = false;
+            emptyEl.textContent =
+              "Nenhum chamado encontrado. Abra um novo chamado ou clique em Recarregar status.";
+          }
+        }
+
         updateSummaryCounts();
         renderTickets();
       })
