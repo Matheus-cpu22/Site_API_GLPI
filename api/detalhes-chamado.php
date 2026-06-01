@@ -39,7 +39,7 @@ try {
 
     try {
         $followups = $glpi->listarFollowups($ticketId);
-        $ticket['respostas'] = normalizeFollowupList($followups['body']);
+        $ticket['respostas'] = normalizeFollowupList($followups['body'], $glpi);
     } catch (Throwable) {
         $ticket['respostas'] = [];
     }

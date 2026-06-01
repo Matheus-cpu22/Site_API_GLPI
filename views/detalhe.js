@@ -74,7 +74,7 @@
 
   /**
    * Renderiza array de respostas retornado pela API.
-   * Formato esperado: { autor, mensagem, data, imagens[] }
+   * Formato esperado: { autor, mensagem, data, imagens[], anexos[] }
    */
   function renderHistory(respostas) {
     if (!historyList) return;
@@ -121,6 +121,24 @@
         });
 
         li.appendChild(media);
+      }
+
+      if (item.anexos && item.anexos.length) {
+        var attachments = document.createElement("div");
+        attachments.className = "history-item__attachments";
+
+        item.anexos.forEach(function (attachment) {
+          var link = document.createElement("a");
+          link.href =
+            attachment.download_url ||
+            "../api/documento.php?id=" + encodeURIComponent(attachment.id);
+          link.textContent = attachment.nome || "Anexo #" + attachment.id;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          attachments.appendChild(link);
+        });
+
+        li.appendChild(attachments);
       }
 
       historyList.appendChild(li);

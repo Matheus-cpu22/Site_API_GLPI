@@ -498,6 +498,30 @@
   object-fit: contain;
 }
 
+.history-item__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  margin-top: 0.75rem;
+}
+
+.history-item__attachments a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0.42rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(101, 211, 255, 0.35);
+  color: var(--accent);
+  text-decoration: none;
+  background: rgba(2, 18, 42, 0.72);
+}
+
+.history-item__attachments a:hover {
+  border-color: rgba(101, 211, 255, 0.7);
+  color: #ffffff;
+}
+
 .history-empty {
   margin: 0;
   font-size: 0.85rem;

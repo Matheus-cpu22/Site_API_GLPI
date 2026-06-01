@@ -128,9 +128,16 @@ class GlpiService
      */
     public function listarDocumentos(int $ticketId): array
     {
+        return $this->listarDocumentosDeItem('Ticket', $ticketId);
+    }
+
+    public function listarDocumentosDeItem(string $itemtype, int $itemsId): array
+    {
+        $itemtype = preg_replace('/[^A-Za-z0-9_]/', '', $itemtype) ?: 'Ticket';
+
         $endpoints = [
-            'Ticket/' . $ticketId . '/Document_Item/',
-            'Ticket/' . $ticketId . '/Document/',
+            $itemtype . '/' . $itemsId . '/Document_Item/',
+            $itemtype . '/' . $itemsId . '/Document/',
         ];
 
         foreach ($endpoints as $endpoint) {
@@ -719,7 +726,7 @@ function formatGlpiDateLabel(string $dateValue): string
 /**
  * Normaliza follow-ups do GLPI para exibição no portal.
  */
-function normalizeFollowupList(mixed $body): array
+function normalizeFollowupList(mixed $body, ?GlpiService $glpi = null): array
 {
     $items = [];
 
@@ -738,12 +745,21 @@ function normalizeFollowupList(mixed $body): array
             continue;
         }
 
+        $followupId = (int) ($followup['id'] ?? 0);
         $rawContent = (string) ($followup['content'] ?? '');
         $decodedContent = decodeGlpiHtmlContent($rawContent);
         $images = extractFollowupImages($decodedContent);
+        $attachments = [];
+
+        if ($glpi !== null && $followupId > 0) {
+            $followupDocuments = getFollowupDocuments($glpi, $followupId);
+            $attachments = $followupDocuments['attachments'];
+            $images = array_merge($images, $followupDocuments['images']);
+        }
+
         $content = normalizeGlpiTextContent($decodedContent);
 
-        if ($content === '' && empty($images)) {
+        if ($content === '' && empty($images) && empty($attachments)) {
             continue;
         }
 
@@ -758,6 +774,7 @@ function normalizeFollowupList(mixed $body): array
             'autor' => (string) $author,
             'mensagem' => $content,
             'imagens' => $images,
+            'anexos' => $attachments,
             'data' => formatGlpiDateLabel($date),
             'data_raw' => $date,
         ];
@@ -846,6 +863,58 @@ function normalizeGlpiImageUrl(string $src): string
     }
 
     return '';
+}
+
+function getFollowupDocuments(GlpiService $glpi, int $followupId): array
+{
+    $result = [
+        'attachments' => [],
+        'images' => [],
+    ];
+
+    try {
+        $documents = $glpi->listarDocumentosDeItem('ITILFollowup', $followupId);
+        $items = is_array($documents['body']) ? $documents['body'] : [];
+    } catch (Throwable) {
+        return $result;
+    }
+
+    foreach ($items as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $id = (int) ($item['id'] ?? 0);
+        $name = (string) ($item['nome'] ?? ('Anexo #' . $id));
+        $url = (string) ($item['download_url'] ?? ('../api/documento.php?id=' . $id));
+
+        if ($id <= 0) {
+            continue;
+        }
+
+        if (isImageDocumentName($name)) {
+            $result['images'][] = [
+                'url' => $url,
+                'nome' => $name,
+            ];
+            continue;
+        }
+
+        $result['attachments'][] = [
+            'id' => $id,
+            'nome' => $name,
+            'download_url' => $url,
+        ];
+    }
+
+    return $result;
+}
+
+function isImageDocumentName(string $name): bool
+{
+    $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+    return in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'], true);
 }
 
 /**
