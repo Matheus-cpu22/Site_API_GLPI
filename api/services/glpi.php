@@ -749,7 +749,10 @@ function normalizeFollowupList(mixed $body, ?GlpiService $glpi = null): array
         $rawContent = (string) ($followup['content'] ?? '');
         $decodedContent = decodeGlpiHtmlContent($rawContent);
         $images = extractFollowupImages($decodedContent);
-        $attachments = extractFollowupLinks($decodedContent);
+        $attachments = mergeDocumentItems(
+            extractFollowupLinks($decodedContent),
+            extractDocumentItemsFromFollowup($followup)
+        );
 
         if ($glpi !== null && $followupId > 0) {
             $followupDocuments = getFollowupDocuments($glpi, $followupId);
@@ -921,6 +924,82 @@ function mergeDocumentItems(array $base, array $extra): array
     }
 
     return $merged;
+}
+
+function extractDocumentItemsFromFollowup(array $followup): array
+{
+    $documents = [];
+    collectDocumentItemsFromValue($followup, $documents);
+
+    return $documents;
+}
+
+function collectDocumentItemsFromValue(mixed $value, array &$documents): void
+{
+    if (!is_array($value)) {
+        return;
+    }
+
+    $documentId = extractDocumentIdFromArray($value);
+
+    if ($documentId > 0) {
+        $documents[] = [
+            'id' => $documentId,
+            'nome' => extractDocumentNameFromArray($value, $documentId),
+            'download_url' => '../api/documento.php?id=' . $documentId,
+        ];
+    }
+
+    foreach ($value as $child) {
+        if (is_array($child)) {
+            collectDocumentItemsFromValue($child, $documents);
+        }
+    }
+}
+
+function extractDocumentIdFromArray(array $value): int
+{
+    foreach (['documents_id', 'document_id', 'Document_id', 'id'] as $key) {
+        if (isset($value[$key]) && is_numeric($value[$key])) {
+            $id = (int) $value[$key];
+
+            if ($id > 0 && isLikelyDocumentArray($value, $key)) {
+                return $id;
+            }
+        }
+    }
+
+    return 0;
+}
+
+function isLikelyDocumentArray(array $value, string $idKey): bool
+{
+    if (isset($value['itemtype']) && (string) $value['itemtype'] === 'Document') {
+        return true;
+    }
+
+    if ($idKey !== 'id') {
+        return true;
+    }
+
+    foreach (['filename', 'filepath', 'mime', 'tag', 'sha1sum'] as $key) {
+        if (isset($value[$key])) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function extractDocumentNameFromArray(array $value, int $documentId): string
+{
+    foreach (['filename', 'name', 'display_name'] as $key) {
+        if (!empty($value[$key]) && is_scalar($value[$key])) {
+            return (string) $value[$key];
+        }
+    }
+
+    return 'Anexo #' . $documentId;
 }
 
 function getFollowupDocuments(GlpiService $glpi, int $followupId): array
