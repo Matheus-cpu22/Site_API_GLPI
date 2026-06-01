@@ -749,11 +749,11 @@ function normalizeFollowupList(mixed $body, ?GlpiService $glpi = null): array
         $rawContent = (string) ($followup['content'] ?? '');
         $decodedContent = decodeGlpiHtmlContent($rawContent);
         $images = extractFollowupImages($decodedContent);
-        $attachments = [];
+        $attachments = extractFollowupLinks($decodedContent);
 
         if ($glpi !== null && $followupId > 0) {
             $followupDocuments = getFollowupDocuments($glpi, $followupId);
-            $attachments = $followupDocuments['attachments'];
+            $attachments = mergeDocumentItems($attachments, $followupDocuments['attachments']);
             $images = array_merge($images, $followupDocuments['images']);
         }
 
@@ -863,6 +863,64 @@ function normalizeGlpiImageUrl(string $src): string
     }
 
     return '';
+}
+
+function extractFollowupLinks(string $content): array
+{
+    $attachments = [];
+
+    if (!preg_match_all('#<a\b[^>]*\bhref\s*=\s*(["\'])(.*?)\1[^>]*>(.*?)</a>#is', $content, $matches, PREG_SET_ORDER)) {
+        return $attachments;
+    }
+
+    foreach ($matches as $match) {
+        $href = html_entity_decode((string) ($match[2] ?? ''), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $label = trim(strip_tags(decodeGlpiHtmlContent((string) ($match[3] ?? ''))));
+        $documentId = extractDocumentIdFromUrl($href);
+
+        if ($documentId <= 0) {
+            continue;
+        }
+
+        $attachments[] = [
+            'id' => $documentId,
+            'nome' => $label !== '' ? $label : ('Anexo #' . $documentId),
+            'download_url' => '../api/documento.php?id=' . $documentId,
+        ];
+    }
+
+    return $attachments;
+}
+
+function extractDocumentIdFromUrl(string $url): int
+{
+    $query = parse_url($url, PHP_URL_QUERY);
+    parse_str(is_string($query) ? $query : '', $params);
+
+    return (int) ($params['docid'] ?? $params['id'] ?? 0);
+}
+
+function mergeDocumentItems(array $base, array $extra): array
+{
+    $merged = [];
+    $seen = [];
+
+    foreach (array_merge($base, $extra) as $item) {
+        if (!is_array($item)) {
+            continue;
+        }
+
+        $id = (int) ($item['id'] ?? 0);
+
+        if ($id <= 0 || isset($seen[$id])) {
+            continue;
+        }
+
+        $seen[$id] = true;
+        $merged[] = $item;
+    }
+
+    return $merged;
 }
 
 function getFollowupDocuments(GlpiService $glpi, int $followupId): array
