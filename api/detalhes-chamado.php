@@ -31,11 +31,8 @@ try {
         errorResponse('Chamado não encontrado.', 404);
     }
 
-    $userId = getAuthenticatedUserId();
-
-    if ($ticket['solicitante_id'] > 0 && $ticket['solicitante_id'] !== $userId) {
-        errorResponse('Você não tem permissão para visualizar este chamado.', 403);
-    }
+    // Se o GLPI devolveu o chamado com a sessão do usuário, a ACL já autorizou a leitura.
+    // Não restringimos ao solicitante — técnicos/master veem o que o perfil GLPI permite.
 
     try {
         $followups = $glpi->listarFollowups($ticketId);

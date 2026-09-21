@@ -35,11 +35,12 @@ try {
     $result = $glpi->listarChamados($userId, $userLogin, $rangeStart, $rangeEnd);
     $body = is_array($result['body']) ? $result['body'] : [];
 
-    // Search/Ticket retorna { data: [...] }; Ticket/ retorna lista direta de objetos.
-    $tickets = normalizeTicketSearchResult($body);
+    // Ticket/ retorna lista direta; search/Ticket retorna { data: [...] }.
+    // Em ambos os casos a ACL do GLPI já limitou o escopo ao perfil do usuário.
+    $tickets = normalizeTicketRestList($body);
 
     if (empty($tickets)) {
-        $tickets = normalizeTicketRestList($body, $userId);
+        $tickets = normalizeTicketSearchResult($body);
     }
 
     $tickets = sortTicketsById($tickets, 'DESC');

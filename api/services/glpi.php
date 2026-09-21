@@ -55,10 +55,43 @@ class GlpiService
     }
 
     /**
-     * Lista chamados do solicitante informado (múltiplas estratégias compatíveis com GLPI 10).
+     * Lista chamados visíveis ao perfil do usuário na sessão GLPI.
+     * A ACL do GLPI decide o escopo (próprios vs. todos da entidade).
      */
     public function listarChamados(int $userId, ?string $userLogin = null, int $rangeStart = 0, int $rangeEnd = 49): array
     {
+        // Prioridade: lista REST respeita perfil/entidade do usuário logado.
+        try {
+            $visible = $this->request(
+                'GET',
+                'Ticket/?range=' . $rangeStart . '-' . $rangeEnd . '&sort=id&order=DESC'
+            );
+            $visibleRows = normalizeTicketRestList($visible['body']);
+
+            if (!empty($visibleRows)) {
+                return $visible;
+            }
+        } catch (Throwable) {
+            // Segue para estratégias alternativas.
+        }
+
+        // Busca sem filtro de solicitante (ainda limitada pela ACL do GLPI).
+        try {
+            $searchAll = $this->request(
+                'GET',
+                'search/Ticket?' . $this->buildTicketSearchQueryAll($rangeStart, $rangeEnd)
+            );
+            $searchRows = normalizeTicketSearchResult($searchAll['body']);
+
+            if (!empty($searchRows)) {
+                return $searchAll;
+            }
+        } catch (Throwable) {
+            // Segue para busca pelo solicitante.
+        }
+
+        // Fallback: apenas chamados em que o usuário é solicitante
+        // (perfis self-service / casos em que Ticket/ retorna vazio).
         $attempts = [];
 
         if ($userId > 0) {
@@ -83,17 +116,16 @@ class GlpiService
             }
         }
 
-        // Fallback: tickets visíveis ao perfil do usuário logado no GLPI.
-        return $this->request('GET', 'Ticket/?range=' . $rangeStart . '-' . $rangeEnd . '&sort=id&order=DESC');
+        return [
+            'http_code' => 200,
+            'body' => [],
+            'raw' => '[]',
+        ];
     }
 
-    private function buildTicketSearchQuery(int $field, string $value, int $rangeStart, int $rangeEnd): string
+    private function buildTicketSearchDisplayParams(int $rangeStart, int $rangeEnd): array
     {
-        return http_build_query([
-            'criteria[0][link]' => 'AND',
-            'criteria[0][field]' => $field,
-            'criteria[0][searchtype]' => 'equals',
-            'criteria[0][value]' => $value,
+        return [
             'forcedisplay[0]' => '2',
             'forcedisplay[1]' => '1',
             'forcedisplay[2]' => '12',
@@ -104,7 +136,27 @@ class GlpiService
             'sort' => '2',
             'order' => 'DESC',
             'range' => $rangeStart . '-' . $rangeEnd,
-        ]);
+        ];
+    }
+
+    private function buildTicketSearchQueryAll(int $rangeStart, int $rangeEnd): string
+    {
+        return http_build_query(array_merge([
+            // Critério amplo: ID > 0 — a ACL do GLPI restringe o resultado.
+            'criteria[0][field]' => '2',
+            'criteria[0][searchtype]' => 'morethan',
+            'criteria[0][value]' => '0',
+        ], $this->buildTicketSearchDisplayParams($rangeStart, $rangeEnd)));
+    }
+
+    private function buildTicketSearchQuery(int $field, string $value, int $rangeStart, int $rangeEnd): string
+    {
+        return http_build_query(array_merge([
+            'criteria[0][link]' => 'AND',
+            'criteria[0][field]' => $field,
+            'criteria[0][searchtype]' => 'equals',
+            'criteria[0][value]' => $value,
+        ], $this->buildTicketSearchDisplayParams($rangeStart, $rangeEnd)));
     }
 
     /**
@@ -508,6 +560,7 @@ function normalizeTicketSearchResult(array $searchBody): array
 
 /**
  * Normaliza resposta do endpoint REST Ticket/ (lista direta).
+ * Não filtra por solicitante: a ACL do GLPI já define o que a sessão pode ver.
  */
 function normalizeTicketRestList(mixed $body, int $userId = 0): array
 {
@@ -524,10 +577,6 @@ function normalizeTicketRestList(mixed $body, int $userId = 0): array
         }
 
         $ticket = normalizeTicketFromRestItem($item);
-
-        if ($userId > 0 && $ticket['solicitante_id'] > 0 && $ticket['solicitante_id'] !== $userId) {
-            continue;
-        }
 
         if ($ticket['id'] > 0) {
             $rows[] = $ticket;
